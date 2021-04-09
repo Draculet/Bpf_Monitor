@@ -11,7 +11,7 @@
 #include <vector>
 #include "util/UrlEncode.h"
 #include "util/md5.h"
-#include "util/HttpRequest.h"
+#include "HttpRequest.h"
 #include "util/json.hpp"
 using namespace nlohmann;
 

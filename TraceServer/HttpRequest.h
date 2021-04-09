@@ -119,5 +119,5 @@ class HttpRequst{
     bool owned;
     event_base *base;
     evdns_base *dnsbase;
-    std::map<std::pair<std::string, short>, evhttp_connection *> connspool;
+    std::map<std::pair<std::string, uint16_t>, evhttp_connection *> connspool;
 };
