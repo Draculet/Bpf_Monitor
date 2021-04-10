@@ -34,20 +34,30 @@ def getData(pid, count):
         }
     }
 
-port = int(sys.argv[1])
-interval = int(sys.argv[2])
+def getQuery(measurement, pid, count):
+    return '%s,item=nginx_req_count,pid=%d value=%d' %(measurement, pid, count)
+
+ip = sys.argv[1]
+port = int(sys.argv[2])
+measurement = sys.argv[3]
+interval = int(sys.argv[4])
+
 bpf = bcc.BPF(text=bpf_code)
 bpf.attach_uprobe(name="/usr/sbin/nginx",
                 sym="ngx_http_create_request",
                 fn_name="hook_ngx_http_create_req")
 
 s = socket.socket()
-s.connect(('127.0.0.1', port))
+#直接发往traceserver,不再经过agent
+print("measurement: %s" %(measurement))
+print("connect %s:%d" %(ip, port))
+s.connect((ip, port))
 
 while True:
     data = bpf["reqs"]
     for key,val in data.items():
-        data = json.dumps(getData(key.value, val.value))
+        #data = json.dumps(getData(key.value, val.value))
+        data = getQuery(measurement, key.value, val.value)
         bytes = struct.pack('>I', len(data))
         s.send(bytes)
         s.send(data.encode('ascii'))

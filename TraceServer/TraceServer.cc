@@ -4,7 +4,10 @@
 #include <event2/bufferevent.h>
 #include <event2/listener.h>
 #include "DataAccess.h"
+#include "ThreadPool.h"
 #include <set>
+
+//g++ TraceServer.cc util/md5.cpp -o TraceServer -levent -lpthread
 
 inline std::string itos(int num){
     char ch;
@@ -31,12 +34,16 @@ class TraceServer{
             LEV_OPT_CLOSE_ON_FREE|LEV_OPT_REUSEABLE, -1, (struct sockaddr*)&sin, sizeof(sin));
         if (listener == nullptr) perror("bind");
         da = new DataAccess("ebpfdb", "127.0.0.1:8086");
+        pool = new ThreadPool(8);
+        pool->Start();
     }
+
     ~TraceServer(){
         delete da;
         event_base_free(base);
         evconnlistener_free(listener);
         //bufferevent设置了BEV_OPT_CLOSE_ON_FREE
+        delete pool;
     }
 
     
@@ -71,7 +78,7 @@ class TraceServer{
         }
         printf("read_cb\n");
         int len = 0;
-        evbuffer *buf = evbuffer_new();
+        //evbuffer *buf = evbuffer_new();
         evbuffer *input = bufferevent_get_input(bev);
         printf("buflen: %d\n", evbuffer_get_length(input));
         if (evbuffer_get_length(input) >= 4)
@@ -81,14 +88,25 @@ class TraceServer{
         printf("len: %d\n", len);
         if (evbuffer_get_length(input) >= len){
             evbuffer_drain(input, 4);
-            evbuffer_remove_buffer(input, buf, len);
             char cbuf[len + 1] = {0};
-            evbuffer_copyout(buf, cbuf, len);
-            printf("data: %s\n", cbuf);
-            //uploadToServer(buf);
-            serv->da->Insert(string(cbuf, len));
+            evbuffer_remove(input, cbuf, len);
+            printf("dbdata: %s\n", cbuf);
+            string data = string(cbuf, len);
+            int pos = data.find(" ");
+            string flag = string(data, 0, pos);
+            pos = flag.find(",");
+            flag = string(flag, pos + 1);
+            printf("thread group flag: %s\n", flag.c_str());
+            serv->pool->push_task([&serv, data]{
+                serv->da->Insert(data);
+            }, flag);
+            //FIXME [err] http.c:1184: Assertion evcon->state == EVCON_WRITING failed in evhttp_write_connectioncb
+            //同步耗时操作,导致read_cb调用次数减少，数据不实时，需要使用独立线程
+            //struct timeval tv; struct timeval tv2; //gettimeofday(&tv, nullptr);gettimeofday(&tv2, nullptr);
+            //FIXME 线程池,需要考虑同一measurement和tag的情况下，多线程不会由于网络问题出现类似递增数据变小的情况
+            //serv->da->Insert(string(cbuf, len));
         }
-        evbuffer_free(buf);
+        //evbuffer_free(buf);
     }
 
     static void event_cb(struct bufferevent *bev, short events, void *arg){
@@ -119,6 +137,7 @@ class TraceServer{
     evconnlistener *listener;
     event_base *base;
     std::set<bufferevent *> conns;
+    ThreadPool *pool;
 };
 
 int main(void){

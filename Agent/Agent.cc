@@ -8,6 +8,7 @@
 #include <event2/bufferevent.h>
 #include <event2/buffer.h>
 #include <arpa/inet.h>
+#include <assert.h>
 
 enum PluginType{
     NgxReqCntPlugin,
@@ -27,6 +28,7 @@ class Agent{
         sin.sin_addr.s_addr = htonl(0);
         sin.sin_port = htons(port);
         base = event_base_new();
+        //为了数据实时性不再同一回收子进程数据,agent父进程不再监听drop
         listener = evconnlistener_new_bind(base, accept_cb, this, 
             LEV_OPT_CLOSE_ON_FREE|LEV_OPT_REUSEABLE, -1, (struct sockaddr*)&sin, sizeof(sin));
         if (listener == nullptr) perror("bind");
@@ -59,12 +61,16 @@ class Agent{
         event_base_dispatch(base);
     }
 
+    void ReConnectServer(){
+
+    }
+
     static void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
          struct sockaddr *address, int socklen, void *arg){
-        printf("accept_cb\n");
+        printf("accept_cb\n"); return;//TODO drop
         Agent *agent = (Agent *)arg;
         struct bufferevent *bev = bufferevent_socket_new(agent->base, fd, BEV_OPT_CLOSE_ON_FREE);
-        bufferevent_setcb(bev, read_cb, NULL, event_cb, NULL);
+        bufferevent_setcb(bev, read_cb, nullptr, event_cb, agent);
         bufferevent_enable(bev, EV_READ);
         agent->conns.insert(bev);
     }
@@ -73,7 +79,6 @@ class Agent{
         Agent *agent = (Agent *)arg;
         printf("read_cb\n");
         int len = 0;
-        evbuffer *buf = evbuffer_new();
         evbuffer *input = bufferevent_get_input(bev);
         printf("buflen: %d\n", evbuffer_get_length(input));
         if (evbuffer_get_length(input) >= 4)
@@ -83,13 +88,19 @@ class Agent{
         printf("len: %d\n", len);
         if (evbuffer_get_length(input) >= len){
             evbuffer_drain(input, 4);
-            evbuffer_remove_buffer(input, buf, len);
             char cbuf[len + 1] = {0};
-            evbuffer_copyout(buf, cbuf, len);
-            printf("data: %s\n", cbuf);
+            evbuffer_remove(input, cbuf, len);
+            //printf("data: %s\n", cbuf);
+            assert(agent->session.size() > 0); 
+            std::string data = agent->session + "," + std::string(cbuf, len);
+            printf("data: %s\n", data.c_str());
+            evbuffer *output = bufferevent_get_output(agent->clibev);
+            len = htonl(data.size());
+            evbuffer_add(output, &len, 4);
+            evbuffer_add(output, data.c_str(), data.size());
+            bufferevent_enable(agent->clibev, EV_WRITE);
         }
         //upload
-        evbuffer_free(buf);
     }
 
     static void event_cb(struct bufferevent *bev, short events, void *arg){
@@ -123,7 +134,8 @@ class Agent{
     void executePlugins(){
         for (auto factory : factorys){
             Plugin *plug = factory->createPlugin();
-            plug->setAgentPort(port);
+            printf("serverPort: %d\n", serverPort);
+            plug->setRemoteInfo(serverIp, serverPort, session);
             int pid = plug->execute();
             printf("exec success\n");
             pids.push_back(pid);
@@ -148,15 +160,15 @@ class Agent{
     event_base *base;
     std::set<bufferevent *> conns;
     bufferevent *clibev;
-    std::string session;
+    std::string session; //用于重连
 };
 
 int main(void){
     Agent agent("127.0.0.1");
     agent.ConnectServer();
+    agent.AddPlugin(NgxReqCntPlugin);
     //agent.AddPlugin(NgxReqCntPlugin);
     //agent.AddPlugin(NgxReqCntPlugin);
-    //agent.AddPlugin(NgxReqCntPlugin);
-    //agent.executePlugins();
-    //agent.waitProcess();
+    agent.executePlugins();
+    agent.waitProcess();
 }

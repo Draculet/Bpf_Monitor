@@ -10,8 +10,6 @@ class NgxReqCntPlugin : public Plugin{
         path = "/usr/bin/python";
         args.push_back("python");
         args.push_back("ngxReqCnt.py");
-        //measurement = "xxxx";//db
-        //tag = "xxxx";//db
     }
 
     inline std::string itos(int num){
@@ -28,9 +26,9 @@ class NgxReqCntPlugin : public Plugin{
     virtual ~NgxReqCntPlugin(){}
 
     virtual int execute(){
-        //args.push_back(measurement);
-        //args.push_back(tag);
-        args.push_back(itos(port));
+        args.push_back(remoteIp);
+        args.push_back(itos(remotePort));
+        args.push_back(measurement);
         args.push_back(itos(interval));
         int pid = 0;
         if ((pid = fork()) == -1){

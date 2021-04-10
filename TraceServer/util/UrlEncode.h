@@ -1,3 +1,5 @@
+#ifndef __URL_ENCODE_H__
+#define __URL_ENCODE_H__
 #include <string>
 #include <assert.h>
 
@@ -58,3 +60,4 @@ std::string UrlDecode(const std::string& str)
     }
     return strTemp;
 }
+#endif

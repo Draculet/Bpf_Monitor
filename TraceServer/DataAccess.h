@@ -54,6 +54,9 @@ class DataAccess{
     int Insert(std::string query){
         std::string url = "http://" + dbAdress + "/write?db=" + dbname;
         httpReq->doPost(url, query);
+        char cbuf[evbuffer_get_length(httpReq->ResData) + 1] = {0};
+        evbuffer_remove(httpReq->ResData, cbuf, evbuffer_get_length(httpReq->ResData));
+        printf("code: %d, body: %s\n", httpReq->RespCode, cbuf);
         return httpReq->RespCode;
     }
 

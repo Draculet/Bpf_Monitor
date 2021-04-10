@@ -37,12 +37,16 @@ class Plugin{
 
     int getPid() {return pid_;}
     
-    void setAgentPort(short agentPort){
-        port = agentPort;
+    void setRemoteInfo(std::string Ip, uint16_t port, std::string measure){
+        remoteIp = Ip;
+        remotePort = port;
+        measurement = measure;
     }
 
     protected:
-    short port;
+    std::string remoteIp;
+    uint16_t remotePort;
+    std::string measurement;
     int pid_ = -1;
     std::vector<std::string> args;
     std::string path;

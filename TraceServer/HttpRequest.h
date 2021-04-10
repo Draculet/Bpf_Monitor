@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 #include <assert.h>
+#include "util/UrlEncode.h"
 
 class HttpRequst{
     public:
@@ -47,6 +48,7 @@ class HttpRequst{
     }
 
     virtual void doPost(std::string url, std::string body){
+        evbuffer_drain(ResData, evbuffer_get_length(ResData));
         struct evhttp_uri* uri = evhttp_uri_parse(url.c_str());
         struct evhttp_request* request = evhttp_request_new([](evhttp_request *req, void *arg){
             HttpRequst *r = (HttpRequst *)arg;
@@ -81,6 +83,7 @@ class HttpRequst{
     }
 
     void doGet(std::string url, std::string query = ""){
+        evbuffer_drain(ResData, evbuffer_get_length(ResData));
         if (query.size() > 0){
             query = UrlEncode(query);
             url += query;
@@ -88,6 +91,7 @@ class HttpRequst{
         struct evhttp_uri* uri = evhttp_uri_parse(url.c_str());
         struct evhttp_request* request = evhttp_request_new([](evhttp_request *req, void *arg){
             HttpRequst *r = (HttpRequst *)arg;
+            r->RespCode = evhttp_request_get_response_code(req);
             event_base_loopbreak(r->base);
         }, this);
         evhttp_request_set_chunked_cb(request, [](evhttp_request *req, void *arg){
