@@ -1,4 +1,8 @@
 #include "NgxReqCntPlugin.h"
+#include "TcpRttPlugin.h"
+#include "TcpCwndPlugin.h"
+#include "TcpRSwndPlugin.h"
+#include "TcpSsthreshPlugin.h"
 #include <vector>
 #include <cstdio>
 #include <cstring>
@@ -12,8 +16,10 @@
 
 enum PluginType{
     NgxReqCntPlugin,
-    XXXXPlugin,
-    XXXPlugin
+    TcpRttPlugin,
+    TcpCwndPlugin,
+    TcpRSwndPlugin,
+    TcpSsthreshPlugin
 };
 
 class Agent{
@@ -62,7 +68,7 @@ class Agent{
     }
 
     void ReConnectServer(){
-
+        //凭借session重连
     }
 
     static void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
@@ -116,18 +122,29 @@ class Agent{
         }
     }
 
+
     void AddPlugin(PluginType type){
         if (type == NgxReqCntPlugin && types.find(NgxReqCntPlugin) == types.end()){
             //printf("add NgxReqCntPlugin\n");
             PluginFactory *factory = new NgxReqCntPluginFactory;
             factorys.push_back(factory);
             types.insert(NgxReqCntPlugin);
-        } else if (type == XXXXPlugin){
-
-        } else if (type == XXXXPlugin){
-            
-        } else {
-            //printf("add failed\n");
+        } else if (type == TcpRttPlugin && types.find(TcpRttPlugin) == types.end()){
+            PluginFactory *factory = new TcpRttPluginFactory;
+            factorys.push_back(factory);
+            types.insert(TcpRttPlugin);
+        } else if (type == TcpCwndPlugin && types.find(TcpCwndPlugin) == types.end()){
+            PluginFactory *factory = new TcpCwndPluginFactory;
+            factorys.push_back(factory);
+            types.insert(TcpCwndPlugin);
+        } else if (type == TcpRSwndPlugin && types.find(TcpRSwndPlugin) == types.end()){
+            PluginFactory *factory = new TcpRSwndPluginFactory;
+            factorys.push_back(factory);
+            types.insert(TcpRSwndPlugin);
+        } else if (type == TcpSsthreshPlugin && types.find(TcpSsthreshPlugin) == types.end()){
+            PluginFactory *factory = new TcpSsthreshPluginFactory;
+            factorys.push_back(factory);
+            types.insert(TcpSsthreshPlugin);
         }
     }
 
@@ -167,8 +184,10 @@ int main(void){
     Agent agent("127.0.0.1");
     agent.ConnectServer();
     agent.AddPlugin(NgxReqCntPlugin);
-    //agent.AddPlugin(NgxReqCntPlugin);
-    //agent.AddPlugin(NgxReqCntPlugin);
+    agent.AddPlugin(TcpRttPlugin);
+    agent.AddPlugin(TcpCwndPlugin);
+    agent.AddPlugin(TcpRSwndPlugin);
+    agent.AddPlugin(TcpSsthreshPlugin);
     agent.executePlugins();
     agent.waitProcess();
 }

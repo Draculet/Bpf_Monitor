@@ -76,35 +76,39 @@ class TraceServer{
         if (bufferevent_get_enabled(bev) & EV_WRITE){
             bufferevent_disable(bev, EV_WRITE);
         }
+
         printf("read_cb\n");
-        int len = 0;
-        //evbuffer *buf = evbuffer_new();
-        evbuffer *input = bufferevent_get_input(bev);
-        printf("buflen: %d\n", evbuffer_get_length(input));
-        if (evbuffer_get_length(input) >= 4)
-            evbuffer_copyout(input, &len, 4);
-        else return;
-        len = ntohl(len);
-        printf("len: %d\n", len);
-        if (evbuffer_get_length(input) >= len){
-            evbuffer_drain(input, 4);
-            char cbuf[len + 1] = {0};
-            evbuffer_remove(input, cbuf, len);
-            printf("dbdata: %s\n", cbuf);
-            string data = string(cbuf, len);
-            int pos = data.find(" ");
-            string flag = string(data, 0, pos);
-            pos = flag.find(",");
-            flag = string(flag, pos + 1);
-            printf("thread group flag: %s\n", flag.c_str());
-            serv->pool->push_task([&serv, data]{
-                serv->da->Insert(data);
-            }, flag);
-            //FIXME [err] http.c:1184: Assertion evcon->state == EVCON_WRITING failed in evhttp_write_connectioncb
-            //同步耗时操作,导致read_cb调用次数减少，数据不实时，需要使用独立线程
-            //struct timeval tv; struct timeval tv2; //gettimeofday(&tv, nullptr);gettimeofday(&tv2, nullptr);
-            //FIXME 线程池,需要考虑同一measurement和tag的情况下，多线程不会由于网络问题出现类似递增数据变小的情况
-            //serv->da->Insert(string(cbuf, len));
+        while (true){
+            int len = 0;
+            //evbuffer *buf = evbuffer_new();
+            evbuffer *input = bufferevent_get_input(bev);
+            printf("buflen: %d\n", evbuffer_get_length(input));
+            if (evbuffer_get_length(input) >= 4)
+                evbuffer_copyout(input, &len, 4);
+            else 
+                break;
+            len = ntohl(len);
+            printf("len: %d\n", len);
+            if (evbuffer_get_length(input) >= len){
+                evbuffer_drain(input, 4);
+                char cbuf[len + 1] = {0};
+                evbuffer_remove(input, cbuf, len);
+                printf("dbdata: %s\n", cbuf);
+                string data = string(cbuf, len);
+                int pos = data.find(" ");
+                string flag = string(data, 0, pos);
+                pos = flag.find(",");
+                flag = string(flag, pos + 1);
+                printf("thread group flag: %s\n", flag.c_str());
+                serv->pool->push_task([&serv, data]{
+                    //FIXME 线程池由于同步需要导致每次http请求都需要新的DataAccess,此处需要优化
+                    DataAccess da("ebpfdb", "127.0.0.1:8086");
+                    da.Insert(data);
+                }, flag);
+                //[err] http.c:1184: Assertion evcon->state == EVCON_WRITING failed in evhttp_write_connectioncb
+                //上面bug原因是多线程共用同一个connection,httpReq的API需要修改
+            } else
+                break;
         }
         //evbuffer_free(buf);
     }

@@ -62,7 +62,7 @@ while True:
         s.send(bytes)
         s.send(data.encode('ascii'))
         print(data)
-    print('sleep')
+    print('loop')
     time.sleep(interval)
 
 s.close()
