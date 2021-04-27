@@ -107,9 +107,9 @@ bpf = bcc.BPF(text=bpf_code)
 #bpf.attach_kprobe(event="tcp_ack_update_rtt.isra.45", fn_name="kprobe_tcp_ack_update_rtt")
 s = socket.socket()
 s.connect((ip, port))
-data = bpf["cwndm"]
+datam = bpf["cwndm"]
 while True:
-    for key,val in data.items():
+    for key,val in datam.items():
         result = struct.unpack('IIHH', key)
         #print(result)
         

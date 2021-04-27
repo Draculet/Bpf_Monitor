@@ -89,10 +89,10 @@ bpf = bcc.BPF(text=bpf_code)
 s = socket.socket()
 s.connect((ip, port))
 
-data = bpf["rwndm"]
-data2 = bpf["swndm"]
+datam = bpf["rwndm"]
+data2m = bpf["swndm"]
 while True:
-    for key,val in data.items():
+    for key,val in datam.items():
         result = struct.unpack('IIHH', key)
         #print(result)
         
@@ -110,7 +110,7 @@ while True:
             s.send(bytes)
             s.send(data.encode('ascii'))
             print(data)
-    for key,val in data2.items():
+    for key,val in data2m.items():
         result = struct.unpack('IIHH', key)
         #print(result)
         
