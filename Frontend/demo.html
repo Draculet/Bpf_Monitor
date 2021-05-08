@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Chart</title>
+    <meta charset="utf-8" />
+    <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.1.0/dist/frappe-charts.min.iife.js"></script>
+    <!-- 主要引用frapp-charts的js-->
+ 
+</head>
+<body>
+    <div id="ngx_mem_chart"><h1>Nginx内存监控暂无实时数据</h1></div>
+    <div id="cpuload_chart"><h1>CPU占用率暂无数据</h1></div>
+    <div id="ngx_fileio_chart"><h1>Nginx文件磁盘IO耗时暂无数据</h1></div>
+    <div id="ngx_reqcnt_chart"><h1>Nginx请求分布暂无数据</h1></div>
+    <div id="ngx_header_chart"><h1>Nginx请求头解析耗时暂无数据</h1></div>
+    <div id="ngx_tcprcvflow_chart"><h1>Nginx Tcp连接接收流量暂无数据</h1></div>
+    <div id="ngx_tcpsndflow_chart"><h1>Nginx Tcp连接发送流量暂无数据</h1></div>
+</body>
+
+<script>
+    var session = window.location.search;
+    session = session.split("=")[1];
+    console.log(session);
+    DoRequestNginxMem("192.168.1.238", session);
+    DoRequestCpuLoad("192.168.1.238", session);
+    DoRequestNgxFileIO("192.168.1.238", session);
+    DoRequestNgxReqCnt("192.168.1.238", session);
+    DoRequestNgxHeader("192.168.1.238", session);
+    DoRequestNgxTcpRcvFlow("192.168.1.238", session);
+    DoRequestNgxTcpSndFlow("192.168.1.238", session);
+    setInterval(DoRequestNginxMem, 5000, "192.168.1.238", session);
+    setInterval(DoRequestCpuLoad, 5000, "192.168.1.238", session);
+    setInterval(DoRequestNgxFileIO, 5000, "192.168.1.238", session);
+    setInterval(DoRequestNgxReqCnt, 5000, "192.168.1.238", session);
+    setInterval(DoRequestNgxHeader, 5000, "192.168.1.238", session);
+    setInterval(DoRequestNgxTcpRcvFlow, 5000, "192.168.1.238", session);
+    setInterval(DoRequestNgxTcpSndFlow, 5000, "192.168.1.238", session);
+
+    /* Ngx_Mem_Chart */
+    var ngx_mem_chart = null;
+    var limit_ngx_mem= 15;
+    var data_ngx_mem = null;
+    
+    function CreateNginxMemChart(data){
+        ngx_mem_chart = new frappe.Chart("#ngx_mem_chart", {
+            title: "Nginx的内存使用情况 单位: kB",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var pidval_ngx_mem = new Map();
+    function DoRequestNginxMem(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='ngx_mem' and \"time\" >= now() - 5s group by pid";
+        request.open(method,url);
+        request.send(null);
+        console.log("doRequest");
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            pidval_ngx_mem.set(element.tags.pid, element.values[element.values.length - 1][1]);
+                            //pids.push(element.tags.pid);
+                            //data.push(element.values[element.values.length - 1][1]);
+                        });
+                        console.log(pidval_ngx_mem);
+                        if (ngx_mem_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            pidval_ngx_mem.forEach(function(value, key){
+                                var dic = new Array();
+                                dic['name'] = key;
+                                dic['type'] = 'line';
+                                dic['values'] = [null, value];
+                                ds.push(dic);
+                            });
+                            data_ngx_mem = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_ngx_mem);
+                            CreateNginxMemChart(data_ngx_mem);
+                        } else {
+                            var data = new Array();
+                            pidval_ngx_mem.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            console.log("update");
+                            dataUpdateNgxMem(data);
+                        }
+                    } else{
+                        console.log("ngx_mem results empty");
+                        if (ngx_mem_chart != null){
+                            var data = new Array();
+                            pidval_ngx_mem.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            dataUpdateNgxMem(data);
+                        }
+                    }
+                    //清空Map
+                    pidval_ngx_mem.forEach(function(value, key){
+                        pidval_ngx_mem.set(key, null);
+                    });
+                }
+            }
+        }
+    }
+
+    function dataUpdateNgxMem(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        ngx_mem_chart.addDataPoint(label, data);
+        if (limit_ngx_mem <= 0){
+            ngx_mem_chart.removeDataPoint(0);
+        } else {
+            limit_ngx_mem -= 1;
+        }
+    }
+    /* Ngx_Mem_Chart end */
+
+
+    /* CpuLoad_Chart */
+    var cpuload_chart = null;
+    var limit_cpuload = 15;
+    var data_cpuload = null;
+    
+    function CreateCpuLoadChart(data){
+        cpuload_chart = new frappe.Chart("#cpuload_chart", {
+            title: "CPU占用率 单位: %",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var pidval_cpuload = new Map();
+    function DoRequestCpuLoad(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='cpu_load' and \"time\" >= now() - 5s group by cpu";
+        request.open(method,url);
+        request.send(null);
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            pidval_cpuload.set(element.tags.cpu, element.values[element.values.length - 1][1]);
+                            //pids.push(element.tags.pid);
+                            //data.push(element.values[element.values.length - 1][1]);
+                        });
+                        console.log(pidval_cpuload);
+                        if (cpuload_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            pidval_cpuload.forEach(function(value, key){
+                                var dic = new Array();
+                                dic['name'] = key;
+                                dic['type'] = 'line';
+                                dic['values'] = [null, value];
+                                ds.push(dic);
+                            });
+                            data_cpuload = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_cpuload);
+                            CreateCpuLoadChart(data_cpuload);
+                        } else {
+                            var data = new Array();
+                            pidval_cpuload.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            console.log("update");
+                            dataUpdateCpuLoad(data);
+                        }
+                    } else{
+                        console.log("cpuload results empty");
+                        if (cpuload_chart != null){
+                            var data = new Array();
+                            pidval_cpuload.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            dataUpdateCpuLoad(data);
+                        }
+                    }
+                    //清空Map
+                    pidval_cpuload.forEach(function(value, key){
+                        pidval_cpuload.set(key, null);
+                    });
+                }
+            }
+        }
+    }
+
+    function dataUpdateCpuLoad(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        cpuload_chart.addDataPoint(label, data);
+        if (limit_cpuload <= 0){
+            cpuload_chart.removeDataPoint(0);
+        } else {
+            limit_cpuload -= 1;
+        }
+    }
+    /* CpuLoad_Chart end */
+
+
+    /* Ngx_FileIO_Chart */
+    var ngx_fileio_chart = null;
+    var limit_ngx_fileio = 15;
+    var data_ngx_fileio = null;
+    
+    function CreateNgxFileIOChart(data){
+        ngx_fileio_chart = new frappe.Chart("#ngx_fileio_chart", {
+            title: "Nginx文件磁盘IO耗时 单位: ms",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var pidval_ngx_fileio = new Map();
+    function DoRequestNgxFileIO(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='ngx_file_io' and \"time\" >= now() - 5s group by pid";
+        request.open(method,url);
+        request.send(null);
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        //第一次可能pid只有一个实例，使用ngx_mem的Map
+                        if (ngx_fileio_chart == null){
+                            pidval_ngx_mem.forEach(function(value, key){
+                                pidval_ngx_fileio.set(key, null);
+                            });
+                        }
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            pidval_ngx_fileio.set(element.tags.pid, element.values[element.values.length - 1][1]);
+                            //pids.push(element.tags.pid);
+                            //data.push(element.values[element.values.length - 1][1]);
+                        });
+                        console.log(pidval_ngx_fileio);
+                        if (ngx_fileio_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            pidval_ngx_fileio.forEach(function(value, key){
+                                var dic = new Array();
+                                dic['name'] = key;
+                                dic['type'] = 'line';
+                                dic['values'] = [null, value];
+                                ds.push(dic);
+                            });
+                            data_ngx_fileio = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_ngx_fileio);
+                            CreateNgxFileIOChart(data_ngx_fileio);
+                        } else {
+                            var data = new Array();
+                            pidval_ngx_fileio.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            console.log("update");
+                            dataUpdateNgxFileIO(data);
+                        }
+                    } else{
+                        console.log("fileio results empty");
+                        if (ngx_fileio_chart != null){
+                            var data = new Array();
+                            pidval_ngx_fileio.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            dataUpdateNgxFileIO(data);
+                        }
+                    }
+                    //清空Map
+                    pidval_ngx_fileio.forEach(function(value, key){
+                        pidval_ngx_fileio.set(key, null);
+                    });
+                }
+            }
+        }
+    }
+
+    function dataUpdateNgxFileIO(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        ngx_fileio_chart.addDataPoint(label, data);
+        if (limit_ngx_fileio <= 0){
+            ngx_fileio_chart.removeDataPoint(0);
+        } else {
+            limit_ngx_fileio -= 1;
+        }
+    }
+    /* Ngx_FileIO_Chart end */
+
+
+
+    /* Ngx_ReqCnt_Chart */
+    var ngx_reqcnt_chart = null;
+    var limit_ngx_reqcnt = 15;
+    var data_ngx_reqcnt = null;
+    
+    function CreateNgxReqCntChart(data){
+        ngx_reqcnt_chart = new frappe.Chart("#ngx_reqcnt_chart", {
+            title: "请求在各Nginx进程的分布 单位: 次数",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var pidval_ngx_reqcnt = new Map();
+    function DoRequestNgxReqCnt(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='nginx_req_count' and \"time\" >= now() - 5s group by pid";
+        request.open(method,url);
+        request.send(null);
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        //第一次可能pid只有一个实例，使用ngx_mem的Map
+                        if (ngx_reqcnt_chart == null){
+                            pidval_ngx_mem.forEach(function(value, key){
+                                pidval_ngx_reqcnt.set(key, null);
+                            });
+                        }
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            pidval_ngx_reqcnt.set(element.tags.pid, element.values[element.values.length - 1][1]);
+                            //pids.push(element.tags.pid);
+                            //data.push(element.values[element.values.length - 1][1]);
+                        });
+                        console.log(pidval_ngx_reqcnt);
+                        if (ngx_reqcnt_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            pidval_ngx_reqcnt.forEach(function(value, key){
+                                var dic = new Array();
+                                dic['name'] = key;
+                                dic['type'] = 'line';
+                                dic['values'] = [null, value];
+                                ds.push(dic);
+                            });
+                            data_ngx_reqcnt = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_ngx_reqcnt);
+                            CreateNgxReqCntChart(data_ngx_reqcnt);
+                        } else {
+                            var data = new Array();
+                            pidval_ngx_reqcnt.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            console.log("update");
+                            dataUpdateNgxReqCnt(data);
+                        }
+                    } else{
+                        console.log("reqcnt results empty");
+                        if (ngx_reqcnt_chart != null){
+                            var data = new Array();
+                            pidval_ngx_reqcnt.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            dataUpdateNgxReqCnt(data);
+                        }
+                    }
+                    //清空Map
+                    pidval_ngx_reqcnt.forEach(function(value, key){
+                        pidval_ngx_reqcnt.set(key, null);
+                    });
+                }
+            }
+        }
+    }
+
+    function dataUpdateNgxReqCnt(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        ngx_reqcnt_chart.addDataPoint(label, data);
+        if (limit_ngx_reqcnt <= 0){
+            ngx_reqcnt_chart.removeDataPoint(0);
+        } else {
+            limit_ngx_reqcnt -= 1;
+        }
+    }
+    /* Ngx_ReqCnt_Chart end */
+
+
+
+    /* Ngx_Header_Parse_Chart */
+    var ngx_header_chart = null;
+    var limit_ngx_header = 15;
+    var data_ngx_header = null;
+    
+    function CreateNgxHeaderChart(data){
+        ngx_header_chart = new frappe.Chart("#ngx_header_chart", {
+            title: "请求HTTP头解析耗时 单位: ms",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var pidval_ngx_header = new Map();
+    function DoRequestNgxHeader(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='ngx_header_parse' and \"time\" >= now() - 5s group by pid";
+        request.open(method,url);
+        request.send(null);
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        //第一次可能pid只有一个实例，使用ngx_mem的Map
+                        if (ngx_header_chart == null){
+                            pidval_ngx_mem.forEach(function(value, key){
+                                pidval_ngx_header.set(key, null);
+                            });
+                        }
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            pidval_ngx_header.set(element.tags.pid, element.values[element.values.length - 1][1]);
+                            //pids.push(element.tags.pid);
+                            //data.push(element.values[element.values.length - 1][1]);
+                        });
+                        console.log(pidval_ngx_header);
+                        if (ngx_header_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            pidval_ngx_header.forEach(function(value, key){
+                                var dic = new Array();
+                                dic['name'] = key;
+                                dic['type'] = 'line';
+                                dic['values'] = [null, value];
+                                ds.push(dic);
+                            });
+                            data_ngx_header = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_ngx_header);
+                            CreateNgxHeaderChart(data_ngx_header);
+                        } else {
+                            var data = new Array();
+                            pidval_ngx_header.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            console.log("update");
+                            dataUpdateNgxHeader(data);
+                        }
+                    } else{
+                        console.log("header results empty");
+                        if (ngx_header_chart != null){
+                            var data = new Array();
+                            pidval_ngx_header.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            dataUpdateNgxHeader(data);
+                        }
+                    }
+                    //清空Map
+                    pidval_ngx_header.forEach(function(value, key){
+                        pidval_ngx_header.set(key, null);
+                    });
+                }
+            }
+        }
+    }
+
+    function dataUpdateNgxHeader(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        ngx_header_chart.addDataPoint(label, data);
+        if (limit_ngx_header <= 0){
+            ngx_header_chart.removeDataPoint(0);
+        } else {
+            limit_ngx_header -= 1;
+        }
+    }
+    /* Ngx_Header_Parse_Chart end */
+
+
+
+    /* Ngx_TcpRcvFlow_Chart */
+    var ngx_tcprcvflow_chart = null;
+    var limit_ngx_tcprcvflow = 15;
+    var data_ngx_tcprcvflow = null;
+    
+    function CreateNgxTcpRcvFlowChart(data){
+        ngx_tcprcvflow_chart = new frappe.Chart("#ngx_tcprcvflow_chart", {
+            title: "Nginx Tcp连接接收流量合计 单位: KB",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var TcpRcvFlowMap = new Map();
+    function DoRequestNgxTcpRcvFlow(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='tcp_recvflow' and \"time\" >= now() - 5s group by dip,dport";
+        request.open(method,url);
+        request.send(null);
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            var key = [element.tags.dip, element.tags.dport];
+                            TcpRcvFlowMap.set(key, element.values[element.values.length - 1][1]);
+                            //pidval_ngx_tcprcvflow.set(element.tags.pid, element.values[element.values.length - 1][1]);
+                            //pids.push(element.tags.pid);
+                            //data.push(element.values[element.values.length - 1][1]);
+                        });
+                        console.log(TcpRcvFlowMap);
+                        if (ngx_tcprcvflow_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            var flow = 0;
+                            TcpRcvFlowMap.forEach(function(value, key){
+                               flow += value; 
+                            });
+                            var dic = new Array();
+                            dic['name'] = 'ngx_tcp_rcvflow';
+                            dic['type'] = 'line';
+                            dic['values'] = [null, flow];
+                            ds.push(dic);
+
+                            data_ngx_tcprcvflow = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_ngx_tcprcvflow);
+                            CreateNgxTcpRcvFlowChart(data_ngx_tcprcvflow);
+                        } else {
+                            var data = new Array();
+                            var flow = 0;
+                            TcpRcvFlowMap.forEach(function(value, key){
+                               flow += value; 
+                            });
+                            data.push(flow);
+                            dataUpdateNgxTcpRcvFlow(data);
+                        }
+                    } else{
+                        console.log("tcprcvflow results empty");
+                        console.log(TcpRcvFlowMap);
+                        if (ngx_tcprcvflow_chart != null){
+                            var data = new Array();
+                            var flow = 0;
+                            TcpRcvFlowMap.forEach(function(value, key){
+                               flow += value; 
+                            });
+                            data.push(flow);
+                            dataUpdateNgxTcpRcvFlow(data);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function dataUpdateNgxTcpRcvFlow(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        ngx_tcprcvflow_chart.addDataPoint(label, data);
+        if (limit_ngx_tcprcvflow <= 0){
+            ngx_tcprcvflow_chart.removeDataPoint(0);
+        } else {
+            limit_ngx_tcprcvflow -= 1;
+        }
+    }
+    /* Ngx_TcpRcvFlow_Chart end */
+
+
+
+    /* Ngx_TcpSndFlow_Chart */
+    var ngx_tcpsndflow_chart = null;
+    var limit_ngx_tcpsndflow = 15;
+    var data_ngx_tcpsndflow = null;
+    
+    function CreateNgxTcpSndFlowChart(data){
+        ngx_tcpsndflow_chart = new frappe.Chart("#ngx_tcpsndflow_chart", {
+            title: "Nginx Tcp连接发送流量合计 单位: KB",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var TcpSndFlowMap = new Map();
+    function DoRequestNgxTcpSndFlow(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='tcp_sendflow' and \"time\" >= now() - 5s group by dip,dport";
+        request.open(method,url);
+        request.send(null);
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            var key = [element.tags.dip, element.tags.dport];
+                            TcpSndFlowMap.set(key, element.values[element.values.length - 1][1]);
+                        });
+                        console.log(TcpSndFlowMap);
+                        if (ngx_tcpsndflow_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            var flow = 0;
+                            TcpSndFlowMap.forEach(function(value, key){
+                               flow += value; 
+                            });
+                            var dic = new Array();
+                            dic['name'] = 'ngx_tcp_sndflow';
+                            dic['type'] = 'line';
+                            dic['values'] = [null, flow];
+                            ds.push(dic);
+
+                            data_ngx_tcpsndflow = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_ngx_tcpsndflow);
+                            CreateNgxTcpSndFlowChart(data_ngx_tcpsndflow);
+                        } else {
+                            var data = new Array();
+                            var flow = 0;
+                            TcpSndFlowMap.forEach(function(value, key){
+                               flow += value; 
+                            });
+                            data.push(flow);
+                            dataUpdateNgxTcpSndFlow(data);
+                        }
+                    } else{
+                        console.log("tcpsndflow results empty");
+                        console.log(TcpSndFlowMap);
+                        if (ngx_tcpsndflow_chart != null){
+                            var data = new Array();
+                            var flow = 0;
+                            TcpSndFlowMap.forEach(function(value, key){
+                               flow += value; 
+                            });
+                            data.push(flow);
+                            dataUpdateNgxTcpSndFlow(data);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function dataUpdateNgxTcpSndFlow(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        ngx_tcpsndflow_chart.addDataPoint(label, data);
+        if (limit_ngx_tcpsndflow <= 0){
+            ngx_tcpsndflow_chart.removeDataPoint(0);
+        } else {
+            limit_ngx_tcpsndflow -= 1;
+        }
+    }
+    /* Ngx_TcpSndFlow_Chart end */
+
+</script>
+</html>
