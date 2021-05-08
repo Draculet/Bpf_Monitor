@@ -139,10 +139,9 @@ bpf = bcc.BPF(text=bpf_code)
 
 s = socket.socket()
 s.connect((ip, port))
-
-while True:
-    data = bpf["rttm"]
-    for key,val in data.items():
+datam = bpf["rttm"]
+while True: 
+    for key,val in datam.items():
         result = struct.unpack('IIHH', key)
         #print(result)
         
@@ -161,6 +160,7 @@ while True:
             print(data)
             #print("rtt: " + str(val.value / 1000) + "ms")
             #print(sip + " " + str(sport) + " " + dip + " " + str(dport) + " rtt: " + str(val.value / 1000) + "ms")
+    datam.clear()
     print("loop")
     time.sleep(interval)
 

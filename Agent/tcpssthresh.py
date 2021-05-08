@@ -83,10 +83,9 @@ interval = int(sys.argv[4])
 bpf = bcc.BPF(text=bpf_code)
 s = socket.socket()
 s.connect((ip, port))
-
+datam = bpf["ssthreshm"]
 while True:
-    data = bpf["ssthreshm"]
-    for key,val in data.items():
+    for key,val in datam.items():
         result = struct.unpack('IIHH', key)
         #print(result)
         
@@ -104,6 +103,7 @@ while True:
             s.send(data.encode('ascii'))
             print(data)
             #print(sip + " " + str(sport) + " " + dip + " " + str(dport) + " ssthresh: " + str(val.value))
+    datam.clear()
     print("loop")
     time.sleep(interval)
     

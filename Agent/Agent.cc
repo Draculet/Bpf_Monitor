@@ -1,3 +1,10 @@
+#include "TcpSendfileFlowPlugin.h"
+#include "TcpFlowPlugin.h"
+#include "NgxFileIOPlugin.h"
+#include "NgxPrePhasePlugin.h"
+#include "NgxHeaderParsePlugin.h"
+#include "CpuLoadPlugin.h"
+#include "NgxMemPlugin.h"
 #include "NgxReqCntPlugin.h"
 #include "TcpRttPlugin.h"
 #include "TcpCwndPlugin.h"
@@ -19,7 +26,14 @@ enum PluginType{
     TcpRttPlugin,
     TcpCwndPlugin,
     TcpRSwndPlugin,
-    TcpSsthreshPlugin
+    TcpSsthreshPlugin,
+    NgxMemPlugin,
+    CpuLoadPlugin,
+    NgxHeaderParsePlugin,
+    NgxPrePhasePlugin,
+    NgxFileIOPlugin,
+    TcpFlowPlugin,
+    TcpSendfileFlowPlugin
 };
 
 class Agent{
@@ -67,9 +81,9 @@ class Agent{
         event_base_dispatch(base);
     }
 
-    void ReConnectServer(){
+    //void ReConnectServer(){
         //凭借session重连
-    }
+    //}
 
     static void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
          struct sockaddr *address, int socklen, void *arg){
@@ -146,6 +160,41 @@ class Agent{
             factorys.push_back(factory);
             types.insert(TcpSsthreshPlugin);
         }
+        else if (type == NgxMemPlugin && types.find(NgxMemPlugin) == types.end()){
+            PluginFactory *factory = new NgxMemPluginFactory;
+            factorys.push_back(factory);
+            types.insert(NgxMemPlugin);
+        }
+        else if (type == CpuLoadPlugin && types.find(CpuLoadPlugin) == types.end()){
+            PluginFactory *factory = new CpuLoadPluginFactory;
+            factorys.push_back(factory);
+            types.insert(CpuLoadPlugin);
+        }
+        else if (type == NgxHeaderParsePlugin && types.find(NgxHeaderParsePlugin) == types.end()){
+            PluginFactory *factory = new NgxHeaderParsePluginFactory;
+            factorys.push_back(factory);
+            types.insert(NgxHeaderParsePlugin);
+        }
+        else if (type == NgxPrePhasePlugin && types.find(NgxPrePhasePlugin) == types.end()){
+            PluginFactory *factory = new NgxPrePhasePluginFactory;
+            factorys.push_back(factory);
+            types.insert(NgxPrePhasePlugin);
+        }
+        else if (type == NgxFileIOPlugin && types.find(NgxFileIOPlugin) == types.end()){
+            PluginFactory *factory = new NgxFileIOPluginFactory;
+            factorys.push_back(factory);
+            types.insert(NgxFileIOPlugin);
+        }
+        else if (type == TcpFlowPlugin && types.find(TcpFlowPlugin) == types.end()){
+            PluginFactory *factory = new TcpFlowPluginFactory;
+            factorys.push_back(factory);
+            types.insert(TcpFlowPlugin);
+        }
+        else if (type == TcpSendfileFlowPlugin && types.find(TcpSendfileFlowPlugin) == types.end()){
+            PluginFactory *factory = new TcpSendfileFlowPluginFactory;
+            factorys.push_back(factory);
+            types.insert(TcpSendfileFlowPlugin);
+        }
     }
 
     void executePlugins(){
@@ -188,6 +237,13 @@ int main(void){
     agent.AddPlugin(TcpCwndPlugin);
     agent.AddPlugin(TcpRSwndPlugin);
     agent.AddPlugin(TcpSsthreshPlugin);
+    agent.AddPlugin(NgxMemPlugin);
+    agent.AddPlugin(CpuLoadPlugin);
+    agent.AddPlugin(NgxHeaderParsePlugin);
+    agent.AddPlugin(NgxPrePhasePlugin);
+    agent.AddPlugin(NgxFileIOPlugin);
+    agent.AddPlugin(TcpFlowPlugin);
+    agent.AddPlugin(TcpSendfileFlowPlugin);
     agent.executePlugins();
     agent.waitProcess();
 }

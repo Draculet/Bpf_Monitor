@@ -126,6 +126,7 @@ while True:
             s.send(bytes)
             s.send(data.encode('ascii'))
             print(data)
+    datam.clear()
     time.sleep(interval)
     print("loop")
 

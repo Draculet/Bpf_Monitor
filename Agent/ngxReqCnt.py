@@ -22,18 +22,6 @@ bpf_code = '''
         return 0;   
     }
 '''
-def getData(pid, count):
-    return {
-        'measurement': 'null',
-        'tags': {
-            'item': 'nginx_req_count',
-            'pid' : '%d' %pid
-        },
-        'fields': {
-            'count': '%d' %count
-        }
-    }
-
 def getQuery(measurement, pid, count):
     return '%s,item=nginx_req_count,pid=%d value=%d' %(measurement, pid, count)
 
