@@ -10,12 +10,17 @@
 </head>
 <body>
     <div id="ngx_mem_chart"><h1>Nginx内存监控暂无实时数据</h1></div>
-    <div id="cpuload_chart"><h1>CPU占用率暂无数据</h1></div>
-    <div id="ngx_fileio_chart"><h1>Nginx文件磁盘IO耗时暂无数据</h1></div>
-    <div id="ngx_reqcnt_chart"><h1>Nginx请求分布暂无数据</h1></div>
-    <div id="ngx_header_chart"><h1>Nginx请求头解析耗时暂无数据</h1></div>
-    <div id="ngx_tcprcvflow_chart"><h1>Nginx Tcp连接接收流量暂无数据</h1></div>
-    <div id="ngx_tcpsndflow_chart"><h1>Nginx Tcp连接发送流量暂无数据</h1></div>
+    <div id="cpuload_chart"><h1>CPU占用率暂无实时数据</h1></div>
+    <div id="ngx_fileio_chart"><h1>Nginx文件磁盘IO耗时暂无实时数据</h1></div>
+    <div id="ngx_reqcnt_chart"><h1>Nginx请求分布暂无实时数据</h1></div>
+    <div id="ngx_header_chart"><h1>Nginx请求头解析耗时暂无实时数据</h1></div>
+    <div id="ngx_tcprcvflow_chart"><h1>Nginx Tcp连接接收流量暂无实时数据</h1></div>
+    <div id="ngx_tcpsndflow_chart"><h1>Nginx Tcp连接发送流量暂无实时数据</h1></div>
+    <div id="ngx_sendfile_chart"><h1>Nginx使用零拷贝技术发送流量暂无实时数据</h1></div>
+    <div id="ngx_prephase_chart"><h1>Nginx前十阶段处理耗时暂无实时数据</h1></div>
+    <div id="ngx_rtt_chart"><h1>Nginx Tcp连接的RTT暂无实时数据</h1></div>
+    <div id="ngx_cwnd_chart"><h1>Nginx Tcp连接拥塞窗口大小暂无实时数据</h1></div>
+    <div id="ngx_ssthresh_chart"><h1>Nginx Tcp连接慢启动阈值暂无实时数据</h1></div>
 </body>
 
 <script>
@@ -29,6 +34,11 @@
     DoRequestNgxHeader("192.168.1.238", session);
     DoRequestNgxTcpRcvFlow("192.168.1.238", session);
     DoRequestNgxTcpSndFlow("192.168.1.238", session);
+    DoRequestNgxSendfile("192.168.1.238", session);
+    DoRequestNgxPre("192.168.1.238", session);
+    DoRequestNgxRTT("192.168.1.238", session);
+    DoRequestNgxCwnd("192.168.1.238", session);
+    DoRequestNgxSsthresh("192.168.1.238", session);
     setInterval(DoRequestNginxMem, 5000, "192.168.1.238", session);
     setInterval(DoRequestCpuLoad, 5000, "192.168.1.238", session);
     setInterval(DoRequestNgxFileIO, 5000, "192.168.1.238", session);
@@ -36,6 +46,11 @@
     setInterval(DoRequestNgxHeader, 5000, "192.168.1.238", session);
     setInterval(DoRequestNgxTcpRcvFlow, 5000, "192.168.1.238", session);
     setInterval(DoRequestNgxTcpSndFlow, 5000, "192.168.1.238", session);
+    setInterval(DoRequestNgxSendfile, 5000, "192.168.1.238", session);
+    setInterval(DoRequestNgxPre, 5000, "192.168.1.238", session);
+    setInterval(DoRequestNgxRTT, 5000, "192.168.1.238", session);
+    setInterval(DoRequestNgxCwnd, 5000, "192.168.1.238", session);
+    setInterval(DoRequestNgxSsthresh, 5000, "192.168.1.238", session);
 
     /* Ngx_Mem_Chart */
     var ngx_mem_chart = null;
@@ -730,6 +745,532 @@
         }
     }
     /* Ngx_TcpSndFlow_Chart end */
+
+
+
+
+    /* Ngx_TcpSendfile_Chart */
+    var ngx_sendfile_chart = null;
+    var limit_ngx_sendfile = 15;
+    var data_ngx_sendfile = null;
+    
+    function CreateNgxSendfileChart(data){
+        ngx_sendfile_chart = new frappe.Chart("#ngx_sendfile_chart", {
+            title: "Nginx使用零拷贝IO发送数据流量 单位: KB",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var pidval_ngx_sendfile = new Map();
+    function DoRequestNgxSendfile(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='tcp_sendfile_flow' and \"time\" >= now() - 5s group by pid";
+        request.open(method,url);
+        request.send(null);
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        //第一次可能pid只有一个实例，使用ngx_mem的Map
+                        if (ngx_sendfile_chart == null){
+                            pidval_ngx_mem.forEach(function(value, key){
+                                pidval_ngx_sendfile.set(key, null);
+                            });
+                        }
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            pidval_ngx_sendfile.set(element.tags.pid, element.values[element.values.length - 1][1]);
+                            //pids.push(element.tags.pid);
+                            //data.push(element.values[element.values.length - 1][1]);
+                        });
+                        console.log(pidval_ngx_sendfile);
+                        if (ngx_sendfile_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            pidval_ngx_sendfile.forEach(function(value, key){
+                                var dic = new Array();
+                                dic['name'] = key;
+                                dic['type'] = 'line';
+                                dic['values'] = [null, value];
+                                ds.push(dic);
+                            });
+                            data_ngx_sendfile = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_ngx_sendfile);
+                            CreateNgxSendfileChart(data_ngx_sendfile);
+                        } else {
+                            var data = new Array();
+                            pidval_ngx_sendfile.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            console.log("update");
+                            dataUpdateNgxSendfile(data);
+                        }
+                    } else {
+                        console.log("sendfile results empty");
+                        if (ngx_sendfile_chart != null){
+                            var data = new Array();
+                            pidval_ngx_sendfile.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            dataUpdateNgxSendfile(data);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function dataUpdateNgxSendfile(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        ngx_sendfile_chart.addDataPoint(label, data);
+        if (limit_ngx_sendfile <= 0){
+            ngx_sendfile_chart.removeDataPoint(0);
+        } else {
+            limit_ngx_sendfile -= 1;
+        }
+    }
+    /* Ngx_TcpSendfile_Chart end */
+
+
+    
+    /* Ngx_Prephase_Chart */
+    var ngx_pre_chart = null;
+    var limit_ngx_pre = 15;
+    var data_ngx_pre = null;
+    
+    function CreateNgxPreChart(data){
+        ngx_pre_chart = new frappe.Chart("#ngx_prephase_chart", {
+            title: "Nginx前十处理阶段耗时 单位: ms",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var pidval_ngx_pre = new Map();
+    function DoRequestNgxPre(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='ngx_pre_phase' and \"time\" >= now() - 5s group by pid";
+        request.open(method,url);
+        request.send(null);
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        //第一次可能pid只有一个实例，使用ngx_mem的Map
+                        if (ngx_pre_chart == null){
+                            pidval_ngx_mem.forEach(function(value, key){
+                                pidval_ngx_pre.set(key, null);
+                            });
+                        }
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            pidval_ngx_pre.set(element.tags.pid, element.values[element.values.length - 1][1]);
+                            //pids.push(element.tags.pid);
+                            //data.push(element.values[element.values.length - 1][1]);
+                        });
+                        console.log(pidval_ngx_pre);
+                        if (ngx_pre_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            pidval_ngx_pre.forEach(function(value, key){
+                                var dic = new Array();
+                                dic['name'] = key;
+                                dic['type'] = 'line';
+                                dic['values'] = [null, value];
+                                ds.push(dic);
+                            });
+                            data_ngx_pre = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_ngx_pre);
+                            CreateNgxPreChart(data_ngx_pre);
+                        } else {
+                            var data = new Array();
+                            pidval_ngx_pre.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            console.log("update");
+                            dataUpdateNgxPre(data);
+                        }
+                    } else{
+                        console.log("pre results empty");
+                        if (ngx_pre_chart != null){
+                            var data = new Array();
+                            pidval_ngx_pre.forEach(function(value, key){
+                                data.push(value);
+                            });
+                            dataUpdateNgxPre(data);
+                        }
+                    }
+                    //清空Map
+                    pidval_ngx_pre.forEach(function(value, key){
+                        pidval_ngx_pre.set(key, null);
+                    });
+                }
+            }
+        }
+    }
+
+    function dataUpdateNgxPre(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        ngx_pre_chart.addDataPoint(label, data);
+        if (limit_ngx_pre <= 0){
+            ngx_pre_chart.removeDataPoint(0);
+        } else {
+            limit_ngx_pre -= 1;
+        }
+    }
+    /* Ngx_Prephase_Chart end */
+
+
+    /* Ngx_RTT_Chart */
+    var ngx_rtt_chart = null;
+    var limit_ngx_rtt = 15;
+    var data_ngx_rtt = null;
+    
+    function CreateNgxRTTChart(data){
+        ngx_rtt_chart = new frappe.Chart("#ngx_rtt_chart", {
+            title: "Nginx Tcp连接的RTT值(数据包一去一回的时延) 单位: ms",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var rttMap = new Map();
+    function DoRequestNgxRTT(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='tcp_rtt' and \"time\" >= now() - 5s group by dip,dport";
+        request.open(method,url);
+        request.send(null);
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            var key = [element.tags.dip, element.tags.dport];
+                            rttMap.set(key, element.values[element.values.length - 1][1]);
+                        });
+                        console.log(rttMap);
+                        if (ngx_rtt_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            var flow = 0;
+                            var size = 0;
+                            rttMap.forEach(function(value, key){
+                                if (value != 0){
+                                    flow += value;
+                                    size += 1;
+                                } 
+                            });
+                            var rtt = flow / size;
+                            var dic = new Array();
+                            dic['name'] = 'ngx_tcp_sndflow';
+                            dic['type'] = 'line';
+                            dic['values'] = [null, rtt];
+                            ds.push(dic);
+
+                            data_ngx_rtt = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_ngx_rtt);
+                            CreateNgxRTTChart(data_ngx_rtt);
+                        } else {
+                            var data = new Array();
+                            var flow = 0;
+                            var size = 0;
+                            rttMap.forEach(function(value, key){
+                                if (value != 0){
+                                    flow += value;
+                                    size += 1;
+                                }
+                            });
+                            var rtt = flow / size;
+                            data.push(rtt);
+                            dataUpdateNgxRTT(data);
+                        }
+                    } else{
+                        console.log("rtt results empty");
+                        console.log(rttMap);
+                        if (ngx_rtt_chart != null){
+                            var data = new Array();
+                            var rtt = null;
+                            data.push(rtt);
+                            dataUpdateNgxRTT(data);
+                        }
+                    }
+                    //清空rttMap
+                    rttMap.forEach(function(value, key){
+                        rttMap.set(key, 0);
+                    });
+                }
+            }
+        }
+    }
+
+    function dataUpdateNgxRTT(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        ngx_rtt_chart.addDataPoint(label, data);
+        if (limit_ngx_rtt <= 0){
+            ngx_rtt_chart.removeDataPoint(0);
+        } else {
+            limit_ngx_rtt -= 1;
+        }
+    }
+    /* Ngx_RTT_Chart end */
+
+
+    /* Ngx_Cwnd_Chart */
+    var ngx_cwnd_chart = null;
+    var limit_ngx_cwnd = 15;
+    var data_ngx_cwnd = null;
+    
+    function CreateNgxCwndChart(data){
+        ngx_cwnd_chart = new frappe.Chart("#ngx_cwnd_chart", {
+            title: "Nginx Tcp连接的拥塞窗口的值 单位: MSS",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var cwndMap = new Map();
+    function DoRequestNgxCwnd(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='tcp_cwnd' and \"time\" >= now() - 5s group by dip,dport";
+        request.open(method,url);
+        request.send(null);
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            var key = [element.tags.dip, element.tags.dport];
+                            cwndMap.set(key, element.values[element.values.length - 1][1]);
+                        });
+                        console.log(cwndMap);
+                        if (ngx_cwnd_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            var flow = 0;
+                            var size = 0;
+                            cwndMap.forEach(function(value, key){
+                                if (value != 0){
+                                    flow += value;
+                                    size += 1;
+                                }
+                            });
+                            var cwnd = flow / size;
+                            var dic = new Array();
+                            dic['name'] = 'ngx_tcp_sndflow';
+                            dic['type'] = 'line';
+                            dic['values'] = [null, cwnd];
+                            ds.push(dic);
+
+                            data_ngx_cwnd = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_ngx_cwnd);
+                            CreateNgxCwndChart(data_ngx_cwnd);
+                        } else {
+                            var data = new Array();
+                            var flow = 0;
+                            var size = 0;
+                            cwndMap.forEach(function(value, key){
+                                if (value != 0){
+                                    flow += value;
+                                    size += 1;
+                                }
+                            });
+                            var cwnd = flow / size;
+                            data.push(cwnd);
+                            dataUpdateNgxCwnd(data);
+                        }
+                    } else{
+                        console.log("cwnd results empty");
+                        console.log(cwndMap);
+                        if (ngx_cwnd_chart != null){
+                            var data = new Array();
+                            var cwnd = null;
+                            data.push(cwnd);
+                            dataUpdateNgxCwnd(data);
+                        }
+                    }
+                    //清空cwndMap
+                    cwndMap.forEach(function(value, key){
+                        cwndMap.set(key, 0);
+                    });
+                }
+            }
+        }
+    }
+
+    function dataUpdateNgxCwnd(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        ngx_cwnd_chart.addDataPoint(label, data);
+        if (limit_ngx_cwnd <= 0){
+            ngx_cwnd_chart.removeDataPoint(0);
+        } else {
+            limit_ngx_cwnd -= 1;
+        }
+    }
+    /* Ngx_Cwnd_Chart end */
+
+
+
+    /* Ngx_Ssthresh_Chart */
+    var ngx_ssthresh_chart = null;
+    var limit_ngx_ssthresh = 15;
+    var data_ngx_ssthresh = null;
+    
+    function CreateNgxSsthreshChart(data){
+        ngx_ssthresh_chart = new frappe.Chart("#ngx_ssthresh_chart", {
+            title: "Nginx Tcp连接慢启动阈值 单位: MSS",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+    }
+
+    var ssthreshMap = new Map();
+    function DoRequestNgxSsthresh(ip, measurement){
+        var request = new XMLHttpRequest();
+        var method = "GET";
+        var url = "http://" + ip + ":8086/query?db=ebpfdb&q=select value from \"" + measurement + "\" where \"item\"='tcp_ssthresh' and \"time\" >= now() - 5s group by dip,dport";
+        request.open(method,url);
+        request.send(null);
+        request.onreadystatechange = function(){
+            console.log(request.status);
+            if(request.readyState == 4){
+                if(request.status == 200 || request.status == 304){
+                    var result = request.responseText;
+                    var object = eval("("+result+")");
+                    if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                        object.results[0].series.forEach(element => {
+                            console.log(element);
+                            var key = [element.tags.dip, element.tags.dport];
+                            ssthreshMap.set(key, element.values[element.values.length - 1][1]);
+                        });
+                        console.log(ssthreshMap);
+                        if (ngx_ssthresh_chart == null){
+                            var now = new Date();
+                            var ds = new Array();
+                            var flow = 0;
+                            var size = 0;
+                            ssthreshMap.forEach(function(value, key){
+                                if (value != 0){
+                                    flow += value;
+                                    size += 1;
+                                }
+                            });
+                            var ssthresh = flow / size;
+                            var dic = new Array();
+                            dic['name'] = 'ngx_tcp_sndflow';
+                            dic['type'] = 'line';
+                            dic['values'] = [null, ssthresh];
+                            ds.push(dic);
+
+                            data_ngx_ssthresh = {
+                                    labels: ["", now.toLocaleTimeString()],
+                                    datasets: ds
+                            }
+                            console.log(data_ngx_ssthresh);
+                            CreateNgxSsthreshChart(data_ngx_ssthresh);
+                        } else {
+                            var data = new Array();
+                            var flow = 0;
+                            var size = 0;
+                            ssthreshMap.forEach(function(value, key){
+                                if (value != 0){
+                                    flow += value;
+                                    size += 1;
+                                }
+                            });
+                            var ssthresh = flow / size;
+                            data.push(ssthresh);
+                            dataUpdateNgxSsthresh(data);
+                        }
+                    } else{
+                        console.log("ssthresh results empty");
+                        console.log(ssthreshMap);
+                        if (ngx_ssthresh_chart != null){
+                            var data = new Array();
+                            var ssthresh = null;
+                            data.push(ssthresh);
+                            dataUpdateNgxSsthresh(data);
+                        }
+                    }
+                    //清空ssthreshMap
+                    ssthreshMap.forEach(function(value, key){
+                        ssthreshMap.set(key, 0);
+                    });
+                }
+            }
+        }
+    }
+
+    function dataUpdateNgxSsthresh(data){
+        var now = new Date();
+        var label = now.toLocaleTimeString()
+        ngx_ssthresh_chart.addDataPoint(label, data);
+        if (limit_ngx_ssthresh <= 0){
+            ngx_ssthresh_chart.removeDataPoint(0);
+        } else {
+            limit_ngx_ssthresh -= 1;
+        }
+    }
+    /* Ngx_Ssthresh_Chart end */
 
 </script>
 </html>
