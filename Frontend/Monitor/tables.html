@@ -272,7 +272,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 ngx_mem_begin = element.values[0][0]
-                                if (request2.status == 200 && request3.status == 200){
+                                if (request2.status == 200 && request3.status == 200 && ngx_mem_begin != "" && ngx_mem_end != "" && ngx_mem_val != 0){
                                     AddTable("NGINX内存平均使用情况", ngx_mem_begin, ngx_mem_end, ngx_mem_val + "kB");
                                 }
                             });
@@ -295,7 +295,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 ngx_mem_end = element.values[0][0]
-                                if (request.status == 200 && request3.status == 200){
+                                if (request.status == 200 && request3.status == 200 && ngx_mem_begin != "" && ngx_mem_end != "" && ngx_mem_val != 0){
                                     AddTable("NGINX内存平均使用情况", ngx_mem_begin, ngx_mem_end, ngx_mem_val + "kB");
                                 }
                             });
@@ -319,7 +319,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 ngx_mem_val = element.values[0][1];
-                                if (request.status == 200 && request2.status == 200){
+                                if (request.status == 200 && request2.status == 200 && ngx_mem_begin != "" && ngx_mem_end != "" && ngx_mem_val != 0){
                                     AddTable("NGINX内存平均使用情况", ngx_mem_begin, ngx_mem_end, ngx_mem_val + "kB");
                                 }
                             });
@@ -352,7 +352,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 cpu_begin = element.values[0][0]
-                                if (request2.status == 200 && request3.status == 200){
+                                if (request2.status == 200 && request3.status == 200 && cpu_begin != "" && cpu_end != "" && cpu_val != 0){
                                     AddTable("CPU平均使用率", cpu_begin, cpu_end, cpu_val + "%");
                                 }
                             });
@@ -375,7 +375,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 cpu_end = element.values[0][0]
-                                if (request.status == 200 && request3.status == 200){
+                                if (request.status == 200 && request3.status == 200 && cpu_begin != "" && cpu_end != "" && cpu_val != 0){
                                     AddTable("CPU平均使用率", cpu_begin, cpu_end, cpu_val + "%");
                                 }
                             });
@@ -399,7 +399,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 cpu_val = element.values[0][1];
-                                if (request.status == 200 && request2.status == 200){
+                                if (request.status == 200 && request2.status == 200 && cpu_begin != "" && cpu_end != "" && cpu_val != 0){
                                     AddTable("CPU平均使用率", cpu_begin, cpu_end, cpu_val + "%");
                                 }
                             });
@@ -432,7 +432,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 rtt_begin = element.values[0][0]
-                                if (request2.status == 200 && request3.status == 200){
+                                if (request2.status == 200 && request3.status == 200 && rtt_begin != "" && rtt_end != "" && rtt_val != 0){
                                     AddTable("TCP连接RTT平均值", rtt_begin, rtt_end, rtt_val + "ms");
                                 }
                             });
@@ -455,7 +455,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 rtt_end = element.values[0][0]
-                                if (request.status == 200 && request3.status == 200){
+                                if (request.status == 200 && request3.status == 200 && rtt_begin != "" && rtt_end != "" && rtt_val != 0){
                                     AddTable("TCP连接RTT平均值", rtt_begin, rtt_end, rtt_val + "ms");
                                 }
                             });
@@ -479,7 +479,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 rtt_val = element.values[0][1];
-                                if (request.status == 200 && request2.status == 200){
+                                if (request.status == 200 && request2.status == 200 && rtt_begin != "" && rtt_end != "" && rtt_val != 0){
                                     AddTable("TCP连接RTT平均值", rtt_begin, rtt_end, rtt_val + "ms");
                                 }
                             });
@@ -511,8 +511,8 @@
                         if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
                             object.results[0].series.forEach(element => {
                                 console.log(element);
-                                cong_begin = element.values[0][0]
-                                if (request2.status == 200 && request3.status == 200){
+                                cong_begin = element.values[0][0];
+                                if (request2.status == 200 && request3.status == 200 && cong_begin != "" && cong_end != "" && cong_val != 0){
                                     AddTable("TCP连接拥塞窗口平均值", cong_begin, cong_end, cong_val + "MSS");
                                 }
                             });
@@ -535,7 +535,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 cong_end = element.values[0][0]
-                                if (request.status == 200 && request3.status == 200){
+                                if (request.status == 200 && request3.status == 200 && cong_begin != "" && cong_end != "" && cong_val != 0){
                                     AddTable("TCP连接拥塞窗口平均值", cong_begin, cong_end, cong_val + "MSS");
                                 }
                             });
@@ -559,7 +559,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 cong_val = element.values[0][1];
-                                if (request.status == 200 && request2.status == 200){
+                                if (request.status == 200 && request2.status == 200 && cong_begin != "" && cong_end != "" && cong_val != 0){
                                     AddTable("TCP连接拥塞窗口平均值", cong_begin, cong_end, cong_val + "MSS");
                                 }
                             });
@@ -592,7 +592,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 ssth_begin = element.values[0][0]
-                                if (request2.status == 200 && request3.status == 200){
+                                if (request2.status == 200 && request3.status == 200 && ssth_begin != "" && ssth_end != "" && ssth_val != 0){
                                     AddTable("TCP连接慢启动阈值平均值", ssth_begin, ssth_end, ssth_val + "MSS");
                                 }
                             });
@@ -615,7 +615,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 ssth_end = element.values[0][0]
-                                if (request.status == 200 && request3.status == 200){
+                                if (request.status == 200 && request3.status == 200 && ssth_begin != "" && ssth_end != "" && ssth_val != 0){
                                     AddTable("TCP连接慢启动阈值平均值", ssth_begin, ssth_end, ssth_val + "MSS");
                                 }
                             });
@@ -639,7 +639,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 ssth_val = element.values[0][1];
-                                if (request.status == 200 && request2.status == 200){
+                                if (request.status == 200 && request2.status == 200 && ssth_begin != "" && ssth_end != "" && ssth_val != 0){
                                     AddTable("TCP连接慢启动阈值平均值", ssth_begin, ssth_end, ssth_val + "MSS");
                                 }
                             });
@@ -895,7 +895,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 reqcnt_begin = element.values[0][0]
-                                if (request2.status == 200 && request3.status == 200){
+                                if (request2.status == 200 && request3.status == 200 && reqcnt_begin != "" && reqcnt_end != "" && reqcnt_val != 0){
                                     AddTable("Nginx每个进程平均处理请求数", reqcnt_begin, reqcnt_end, reqcnt_val);
                                 }
                             });
@@ -918,7 +918,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 reqcnt_end = element.values[0][0]
-                                if (request.status == 200 && request3.status == 200){
+                                if (request.status == 200 && request3.status == 200 && reqcnt_begin != "" && reqcnt_end != "" && reqcnt_val != 0){
                                     AddTable("Nginx每个进程平均处理请求数", reqcnt_begin, reqcnt_end, reqcnt_val);
                                 }
                             });
@@ -942,7 +942,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 reqcnt_val = element.values[0][1];
-                                if (request.status == 200 && request2.status == 200){
+                                if (request.status == 200 && request2.status == 200 && reqcnt_begin != "" && reqcnt_end != "" && reqcnt_val != 0){
                                     AddTable("Nginx每个进程平均处理请求数", reqcnt_begin, reqcnt_end, reqcnt_val);
                                 }
                             });
@@ -976,7 +976,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 header_begin = element.values[0][0]
-                                if (request2.status == 200 && request3.status == 200){
+                                if (request2.status == 200 && request3.status == 200 && header_begin != "" && header_end != "" && header_val != 0){
                                     AddTable("Nginx解析请求头平均耗时", header_begin, header_end, header_val + "ms");
                                 }
                             });
@@ -999,7 +999,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 header_end = element.values[0][0]
-                                if (request.status == 200 && request3.status == 200){
+                                if (request.status == 200 && request3.status == 200 && header_begin != "" && header_end != "" && header_val != 0){
                                     AddTable("Nginx解析请求头平均耗时", header_begin, header_end, header_val + "ms");
                                 }
                             });
@@ -1023,7 +1023,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 header_val = element.values[0][1];
-                                if (request.status == 200 && request2.status == 200){
+                                if (request.status == 200 && request2.status == 200 && header_begin != "" && header_end != "" && header_val != 0){
                                     AddTable("Nginx解析请求头平均耗时", header_begin, header_end, header_val + "ms");
                                 }
                             });
@@ -1058,7 +1058,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 rwin_begin = element.values[0][0]
-                                if (request2.status == 200 && request3.status == 200){
+                                if (request2.status == 200 && request3.status == 200 && rwin_begin != "" && rwin_end != "" && rwin_val != 0){
                                     AddTable("Tcp连接平均接收窗口大小", rwin_begin, rwin_end, rwin_val + "byte");
                                 }
                             });
@@ -1081,7 +1081,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 rwin_end = element.values[0][0]
-                                if (request.status == 200 && request3.status == 200){
+                                if (request.status == 200 && request3.status == 200 && rwin_begin != "" && rwin_end != "" && rwin_val != 0){
                                     AddTable("Tcp连接平均接收窗口大小", rwin_begin, rwin_end, rwin_val + "byte");
                                 }
                             });
@@ -1105,7 +1105,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 rwin_val = element.values[0][1];
-                                if (request.status == 200 && request2.status == 200){
+                                if (request.status == 200 && request2.status == 200 && rwin_begin != "" && rwin_end != "" && rwin_val != 0){
                                     AddTable("Tcp连接平均接收窗口大小", rwin_begin, rwin_end, rwin_val + "byte");
                                 }
                             });
@@ -1140,7 +1140,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 swin_begin = element.values[0][0]
-                                if (request2.status == 200 && request3.status == 200){
+                                if (request2.status == 200 && request3.status == 200 && swin_begin != "" && swin_end != "" && swin_val != 0){
                                     AddTable("Tcp连接平均发送窗口大小", swin_begin, swin_end, swin_val + "byte");
                                 }
                             });
@@ -1163,7 +1163,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 swin_end = element.values[0][0]
-                                if (request.status == 200 && request3.status == 200){
+                                if (request.status == 200 && request3.status == 200 && swin_begin != "" && swin_end != "" && swin_val != 0){
                                     AddTable("Tcp连接平均发送窗口大小", swin_begin, swin_end, swin_val + "byte");
                                 }
                             });
@@ -1187,7 +1187,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 swin_val = element.values[0][1];
-                                if (request.status == 200 && request2.status == 200){
+                                if (request.status == 200 && request2.status == 200 && swin_begin != "" && swin_end != "" && swin_val != 0){
                                     AddTable("Tcp连接平均发送窗口大小", swin_begin, swin_end, swin_val + "byte");
                                 }
                             });
@@ -1222,7 +1222,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 fio_begin = element.values[0][0]
-                                if (request2.status == 200 && request3.status == 200){
+                                if (request2.status == 200 && request3.status == 200 && fio_begin != "" && fio_end != "" && fio_val != 0){
                                     AddTable("NGINX平均文件IO耗时", fio_begin, fio_end, fio_val + "ms");
                                 }
                             });
@@ -1245,7 +1245,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 fio_end = element.values[0][0]
-                                if (request.status == 200 && request3.status == 200){
+                                if (request.status == 200 && request3.status == 200 && fio_begin != "" && fio_end != "" && fio_val != 0){
                                     AddTable("NGINX平均文件IO耗时", fio_begin, fio_end, fio_val + "ms");
                                 }
                             });
@@ -1269,7 +1269,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 fio_val = element.values[0][1];
-                                if (request.status == 200 && request2.status == 200){
+                                if (request.status == 200 && request2.status == 200 && fio_begin != "" && fio_end != "" && fio_val != 0){
                                     AddTable("NGINX平均文件IO耗时", fio_begin, fio_end, fio_val + "ms");
                                 }
                             });
@@ -1305,7 +1305,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 pre_begin = element.values[0][0]
-                                if (request2.status == 200 && request3.status == 200){
+                                if (request2.status == 200 && request3.status == 200 && pre_begin != "" && pre_end != "" && pre_val != 0){
                                     AddTable("NGINX前十阶段处理平均耗时", pre_begin, pre_end, pre_val + "ms");
                                 }
                             });
@@ -1328,7 +1328,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 pre_end = element.values[0][0]
-                                if (request.status == 200 && request3.status == 200){
+                                if (request.status == 200 && request3.status == 200 && pre_begin != "" && pre_end != "" && pre_val != 0){
                                     AddTable("NGINX前十阶段处理平均耗时", pre_begin, pre_end, pre_val + "ms");
                                 }
                             });
@@ -1352,7 +1352,7 @@
                             object.results[0].series.forEach(element => {
                                 console.log(element);
                                 pre_val = element.values[0][1];
-                                if (request.status == 200 && request2.status == 200){
+                                if (request.status == 200 && request2.status == 200 && pre_begin != "" && pre_end != "" && pre_val != 0){
                                     AddTable("NGINX前十阶段处理平均耗时", pre_begin, pre_end, pre_val + "ms");
                                 }
                             });
