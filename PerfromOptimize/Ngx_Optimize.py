@@ -96,6 +96,7 @@ BPF_HASH(sendfile_flow, u32, u64);
 BPF_HASH(sendfile_flow_show, u64, u64);
 
 BPF_HASH(counts, struct key_t);
+BPF_HASH(timewait_m, u32, u64);
 
 int do_count(struct pt_regs *ctx) {
     struct key_t key = {};
@@ -108,6 +109,27 @@ int do_count(struct pt_regs *ctx) {
     bpf_get_current_comm(&(key.comm), 16);
 
     counts.increment(key);
+    return 0;
+}
+
+int kprobe__tcp_time_wait(struct pt_regs *ctx, struct sock *sk){
+    u32 pid = bpf_get_current_pid_tgid() >> 32;
+    u64 *count = timewait_m.lookup(pid);
+    u64 cnt = 1;
+    if (count)
+        cnt += *count;
+    timewait_m.update(&pid, cnt);
+    return 0;
+}
+
+int kprobe__inet_twsk_free(struct pt_regs *ctx, struct inet_timewait_sock *tw){
+    u32 pid = bpf_get_current_pid_tgid() >> 32;
+    u64 *count = timewait_m.lookup(pid);
+    u64 cnt = 0;
+    if (count){
+        cnt = *count - 1;
+        timewait_m.update(&pid, cnt);
+    }
     return 0;
 }
 
@@ -366,6 +388,8 @@ def reloadNginx():
         sleep(1)
 '''
 
+
+# IO方式优化
 def JudgeIO(bpf, duration):
     global iotype
     rhit = getReadHit(bpf)
@@ -534,7 +558,9 @@ def JudgeIO(bpf, duration):
                     return #保持使用aiothread
     #endif athreadio
     print("unchange")
-    
+
+
+# cpu工作进程绑定优化
 def bindCpu():
     cpu_percent = psutil.cpu_percent(interval=None, percpu=True)
     cpunum = len(cpu_percent)
@@ -553,6 +579,9 @@ def bindCpu():
     f = open('nginx.conf','r+')
     flist = f.readlines()
     for index, line in enumerate(flist):
+        if (line.find("worker_cpu_affinity") != -1):
+            return
+    for index, line in enumerate(flist):
         if line.find("worker_processes") != -1:
             flist[index] = "worker_processes " + str(cpunum) + ";\r\n"
             bindline = "worker_cpu_affinity "
@@ -561,11 +590,30 @@ def bindCpu():
                     bindline = bindline + s + ";"
                 else:
                     bindline = bindline + s + " "
-            print(bindline)
+            #print(bindline)
             flist.insert(index + 1, bindline + "\r\n")
     f = open('nginx.conf', 'w+')
     f.writelines(flist)
     
+
+#timewait相关内核参数优化
+def getTimeWaitCurCount(bpf):
+    tw_m = bpf["timewait_m"]
+    total = 0
+    for key,val in tw_m.items():
+        total += val
+    return total
+    
+def JudgeTimeWait(bpf, duration, limit):
+    tw_count = getTimeWaitCurCount(bpf)
+    if (tw_count > limit):
+        openTcpTWRecycle()
+        openTcpTWReUse()
+    else
+        closeTcpTWRecycle()
+        closeTcpTWReUse()
+
+
 
 class IOType(Enum):
     default_io = 1

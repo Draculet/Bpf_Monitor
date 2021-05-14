@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Nginx监控</title>
+
+    <!-- Custom fonts for this template-->
+    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+
+    <!-- Custom styles for this template-->
+    <link href="css/sb-admin-2.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.1.0/dist/frappe-charts.min.iife.js"></script>
+
+</head>
+
+<body id="page-top">
+
+    <!-- Page Wrapper -->
+    <div id="wrapper">
+
+        <!-- Sidebar -->
+        <ul class="navbar-nav bg-gradient-dark sidebar sidebar-dark accordion" id="accordionSidebar">
+
+            <!-- Sidebar - Brand -->
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
+                    <img src="img/nginx.png" style="width: 4rem;">
+                    <div class="sidebar-brand-text mx-3">监控器</div>
+            </a>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider my-0">
+
+            <!-- Nav Item - Dashboard -->
+            <li class="nav-item active">
+                <a class="nav-link" href="index.html">
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>监控面板</span></a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+            <!-- Nav Item - Pages Collapse Menu -->
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages"
+                    aria-expanded="true" aria-controls="collapsePages">
+                    <i class="fas fa-fw fa-folder"></i>
+                    <span>实时监控</span>
+                </a>
+                <div id="collapsePages" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded" id="index_session">
+                    </div>
+                </div>
+            </li>
+
+            <!-- Nav Item - Charts -->
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <i class="fas fa-fw fa-chart-area"></i>
+                    <span>实时监测图表</span></a>
+            </li>
+
+            <!-- Nav Item - Tables -->
+            <li class="nav-item">
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseMean"
+                        aria-expanded="true" aria-controls="collapseMean">
+                        <i class="fas fa-fw fa-folder"></i>
+                        <span>统计信息</span>
+                    </a>
+                    <div id="collapseMean" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded" id="mean_session">
+                        </div>
+                    </div>
+                </li>
+            </li>
+
+            <!-- Nav Item - Grafana -->
+            <li class="nav-item">
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseGrafana"
+                        aria-expanded="true" aria-controls="collapseGrafana">
+                        <i class="fas fa-fw fa-folder"></i>
+                        <span>Grafana监控入口</span>
+                    </a>
+                    <div id="collapseGrafana" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded" id="grafana_session">
+                        </div>
+                    </div>
+                </li>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider d-none d-md-block">
+
+            <!-- Sidebar Toggler (Sidebar) -->
+            <div class="text-center d-none d-md-inline">
+                <button class="rounded-circle border-0" id="sidebarToggle"></button>
+            </div>
+
+        </ul>
+        <!-- End of Sidebar -->
+
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+
+            <!-- Main Content -->
+            <div id="content">
+
+                <!-- Topbar -->
+                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+                </nav>
+                <!-- End of Topbar -->
+
+                <!-- Begin Page Content -->
+                <div class="container-fluid">
+
+                    <!-- Page Heading -->
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">监控面板</h1>
+                    </div>
+
+                    <!-- Content Row -->
+                    <div class="row">
+
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-success shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                                正在执行的监控项</div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">12项</div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-success shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                                influxDB数据库状态</div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">在线</div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-success shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Nginx状态
+                                            </div>
+                                            <div class="row no-gutters align-items-center">
+                                                <div class="col-auto">
+                                                    <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">正常</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-success shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                                Grafana服务器状态</div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">正常</div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content Row -->
+
+                    <div class="row">
+
+                        <!-- Area Chart -->
+                        <div class="col-xl-8 col-lg-7">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                <div
+                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">Tcp流量</h6>
+                                </div>
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <div class="chart-area" id="index_chart">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pie Chart -->
+                        <div class="col-xl-4 col-lg-5">
+                            <div class="card shadow mb-4">
+                                <!-- Card Header - Dropdown -->
+                                <div
+                                    class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                    <h6 class="m-0 font-weight-bold text-primary">访问来源</h6>
+                                </div>
+                                <!-- Card Body -->
+                                <div class="card-body">
+                                    <div class="chart-pie pt-4 pb-2" id="index_pie">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content Row -->
+                    <div class="row">
+
+                        <!-- Content Column -->
+                        <div class="col-lg-6 mb-4">
+
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">监控项</h6>
+                                </div>
+                                <div class="card-body">
+                                    <h4 class="small font-weight-bold">内存监控</h4>
+                                    <h4 class="small font-weight-bold">请求分布</h4>
+                                    <h4 class="small font-weight-bold">Tcp连接接收流量</h4>
+                                    <h4 class="small font-weight-bold">Tcp连接发送流量</h4>
+                                    <h4 class="small font-weight-bold">零拷贝技术发送流量</h4>
+                                    <h4 class="small font-weight-bold">Nginx前十阶段处理耗时</h4>
+                                    <h4 class="small font-weight-bold">Tcp连接的RTT</h4>
+                                    <h4 class="small font-weight-bold">Tcp连接拥塞窗口大小</h4>
+                                    <h4 class="small font-weight-bold">Tcp连接慢启动阈值</h4>
+                                </div>
+                            </div>
+
+                    
+                        </div>
+
+                        <div class="col-lg-6 mb-4">
+
+                            <!-- Illustrations -->
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">eBPF介绍</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="text-center">
+                                        <img class="img-fluid px-3 px-sm-4 mt-3 mb-4" style="width: 25rem;"
+                                            src="img/bpf.png" alt="...">
+                                    </div>
+                                    <p>eBPF是一个在内核中运行的虚拟机,它可以去运行用户.在用户态实现的这种eBPF的代码,在内核以本地代码的形式和速度去执行,它可以跟内核的Trace系统相结合,给我们提供了几乎无限的可观测性.
+                                    </p><p>eBPF的基本原理——它所有的接口都是通过BPF系统调用来跟内核进行交互,eBPF程序通过LVM和Cline进行编译,产生 eBPF的字节码,通过BPF系统调用,加载到内核,验证代码的安全性,从而通过JIT实
+                                        时的转化成Native的X86的指令.</p>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+                <!-- /.container-fluid -->
+
+            </div>
+            <!-- End of Main Content -->
+
+            <!-- Footer -->
+            <footer class="sticky-footer bg-white">
+                <div class="container my-auto">
+                    <div class="copyright text-center my-auto">
+                        <span>Copyright &copy; Nginx Monitor</span>
+                    </div>
+                </div>
+            </footer>
+            <!-- End of Footer -->
+
+        </div>
+        <!-- End of Content Wrapper -->
+
+    </div>
+    <!-- End of Page Wrapper -->
+
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
+
+    <!-- Bootstrap core JavaScript-->
+    <script src="vendor/jquery/jquery.min.js"></script>
+    <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Core plugin JavaScript-->
+    <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+
+    <!-- Custom scripts for all pages-->
+    <script src="js/sb-admin-2.min.js"></script>
+    <script>
+        var ip = "192.168.1.238";
+
+
+        var data = {
+                labels: ["12am-3am", "3am-6am", "6am-9am", "9am-12pm",
+                "12pm-3pm", "3pm-6pm", "6pm-9pm", "9pm-12am"],
+
+                datasets: [
+                    {
+                        label: "Some Data", type: 'bar',
+                        values: [400, 500, 6200, 16200, 91500, 96400, 96645, 97200]
+                    }
+                ]
+        }
+
+        var piedata = {
+                labels: ["localhost", "remote"],
+
+                datasets: [
+                    {
+                        label: "Some Data", type: 'bar',
+                        values: [100, 100]
+                    }
+                ]
+        }
+
+        chart = new frappe.Chart("#index_chart", {
+            title: "Nginx流量 单位: KB",
+            data: data,
+            type: 'axis-mixed',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+
+        pie = new frappe.Chart("#index_pie", {
+            title: "流量来源",
+            data: piedata,
+            type: 'pie',
+            height: 250,
+            colors: ['orange','red', 'blue', 'purple', 'black', 'green', 'yellow'],
+            lineOptions: {
+                regionFill: 0
+            }
+        })
+
+        function AddSession(key, value){
+            var sel = document.getElementById("index_session");
+            var sel2 = document.getElementById("grafana_session");
+            var sel3 = document.getElementById("mean_session");
+            var el = document.createElement("a");
+            el.className = "collapse-item";
+            el.innerHTML = value;
+            el.href = "charts.html?session=" + value;
+            var el2 = document.createElement("a");
+            el2.className = "collapse-item";
+            el2.innerHTML = value;
+            el2.href = "grafana.html?session=" + value;
+            var el3 = document.createElement("a");
+            el3.className = "collapse-item";
+            el3.innerHTML = value;
+            el3.href = "tables.html?session=" + value;
+            sel.appendChild(el)
+            sel2.appendChild(el2)
+            sel3.appendChild(el3)
+        }
+
+        GetMeasurement(ip);
+
+        function GetMeasurement(ip){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8086/query?db=ebpfdb&q=show measurements";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(result);
+                        console.log(object);
+                        if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                            object.results[0].series[0].values.forEach(element => {
+                                console.log(element);
+                                AddSession(element, element);
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    
+    </script>
+</body>
+
+</html>
