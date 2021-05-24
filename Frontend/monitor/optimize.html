@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Nginx监控</title>
+
+    <!-- Custom fonts for this template-->
+    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+
+    <!-- Custom styles for this template-->
+    <link href="css/sb-admin-2.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.1.0/dist/frappe-charts.min.iife.js"></script>
+
+</head>
+
+<body id="page-top">
+
+    <!-- Page Wrapper -->
+    <div id="wrapper">
+
+        <!-- Sidebar -->
+        <ul class="navbar-nav bg-gradient-dark sidebar sidebar-dark accordion" id="accordionSidebar">
+
+            <!-- Sidebar - Brand -->
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
+                    <img src="img/nginx.png" style="width: 4rem;">
+                    <div class="sidebar-brand-text mx-3">监控器</div>
+            </a>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider my-0">
+
+            <!-- Nav Item - Dashboard -->
+            <li class="nav-item">
+                <a class="nav-link" href="index.html">
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>监控面板</span></a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+            <!-- Nav Item - Pages Collapse Menu -->
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePages"
+                    aria-expanded="true" aria-controls="collapsePages">
+                    <i class="fas fa-fw fa-folder"></i>
+                    <span>实时监控</span>
+                </a>
+                <div id="collapsePages" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded" id="index_session">
+                    </div>
+                </div>
+            </li>
+
+            <!-- Nav Item - Charts -->
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <i class="fas fa-fw fa-chart-area"></i>
+                    <span>实时监测图表</span></a>
+            </li>
+
+            <!-- Nav Item - Tables -->
+            <li class="nav-item">
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseMean"
+                        aria-expanded="true" aria-controls="collapseMean">
+                        <i class="fas fa-fw fa-folder"></i>
+                        <span>统计信息</span>
+                    </a>
+                    <div id="collapseMean" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded" id="mean_session">
+                        </div>
+                    </div>
+                </li>
+            </li>
+
+            <!-- Nav Item - Grafana -->
+            <li class="nav-item">
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseGrafana"
+                        aria-expanded="true" aria-controls="collapseGrafana">
+                        <i class="fas fa-fw fa-folder"></i>
+                        <span>Grafana监控入口</span>
+                    </a>
+                    <div id="collapseGrafana" class="collapse" aria-labelledby="headingPages" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded" id="grafana_session">
+                        </div>
+                    </div>
+                </li>
+            </li>
+
+            <li class="nav-item active">
+                    <a class="nav-link" href="optimize.html">
+                        <i class="fas fa-fw fa-chart-area"></i>
+                        <span>调优系统</span></a>
+                </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider d-none d-md-block">
+
+            <!-- Sidebar Toggler (Sidebar) -->
+            <div class="text-center d-none d-md-inline">
+                <button class="rounded-circle border-0" id="sidebarToggle"></button>
+            </div>
+
+        </ul>
+        <!-- End of Sidebar -->
+
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+
+            <!-- Main Content -->
+            <div id="content">
+
+                <!-- Topbar -->
+                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+                </nav>
+                <!-- End of Topbar -->
+
+                <!-- Begin Page Content -->
+                <div class="container-fluid">
+
+                    <!-- Page Heading -->
+                    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                        <h1 class="h3 mb-0 text-gray-800">控制面板</h1>
+                    </div>
+
+                    <!-- Content Row -->
+                    <div class="row">
+
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-info shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                                NGINX IO方式自动调优</div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-80">状态:<span id="iostate">off</span></div>
+                                            <button class="btn-success border-0" id="ioon" onclick=openIO()>开启</button>
+                                            <button class="btn-danger border-0" id="iooff" onclick=closeIO()>关闭</button>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-info shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                                        NGINX工作进程绑定调优</div>
+                                                <div class="h5 mb-0 font-weight-bold text-gray-80">状态:<span id="cpustate">off</span></div>
+                                                <button class="btn-success border-0" id="cpuon" onclick=openCpu()>开启</button>
+                                                <button class="btn-danger border-0" id="cpuoff"onclick=closeCpu()>关闭</button>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-info shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                                        TIMEWAIT调优</div>
+                                                <div class="h5 mb-0 font-weight-bold text-gray-80">状态:<span id="twstate">off</span></div>
+                                                <button class="btn-success border-0" id="twon" onclick=openTW()>开启</button>
+                                                <button class="btn-danger border-0" id="twoff" onclick=closeTW()>关闭</button>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-info shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                                        拥塞算法调优</div>
+                                                <div class="h5 mb-0 font-weight-bold text-gray-80">状态:<span id="congstate">off</span></div>
+                                                <button class="btn-success border-0" id="congon" onclick=openCong()>开启</button>
+                                                <button class="btn-danger border-0" id="congoff" onclick=closeCong()>关闭</button>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content Row -->
+
+                    <!-- Content Row -->
+                    <div class="row">
+                        <!-- Content Column -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">NGINX IO自动调优</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p>该调优模块将自动根据流向NGINX的Tcp流量的大小判断请求的类型及可能的磁盘IO文件大小，自动调节切换IO方式降低磁盘IO时间,目前支持的IO方式有：</p>
+                                    <p>
+                                        <h3 class="small font-weight-bold">零拷贝IO</h3>
+                                        <h3 class="small font-weight-bold">异步AIO</h3>
+                                        <h3 class="small font-weight-bold">异步AIO+线程池threadpool</h3>
+                                        <h3 class="small font-weight-bold">默认IO</h3>
+                                        <h3 class="small font-weight-bold">MMAP DirectIO</h3>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6 mb-4">
+
+                            <!-- Illustrations -->
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">CPU与进程绑定调优</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p>该调优项将自动监测NGINX运行环境的CPU核数，自动设置工作进程数，使之与CPU核数相对应并自动绑定CPU，使得大量请求下各CPU利用率平均</p>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="row">
+                            <!-- Content Column -->
+                            <div class="col-lg-6 mb-4">
+                                <div class="card shadow mb-4">
+                                    <div class="card-header py-3">
+                                        <h6 class="m-0 font-weight-bold text-primary">TIMEWAIT自动回收调优</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p>该调优模块将监测由NGINX主动关闭连接引起的TIMEWAIT，当TIMEWAIT数量达到一定程度将开启快速回收和端口重用，
+                                            并持续监控TIMEWAIT数，直到TIMEWAIT数量降低到阈值后自动关闭端口重用和快速回收<br>(此TCP选项可能会造成连接串用)</p>
+                                    </div>
+                                </div>
+                            </div>
+    
+                            <div class="col-lg-6 mb-4">
+    
+                                <!-- Illustrations -->
+                                <div class="card shadow mb-4">
+                                    <div class="card-header py-3">
+                                        <h6 class="m-0 font-weight-bold text-primary">TCP拥塞算法优化</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p>该调优项将可直接切换TCP拥塞算法，默认内核使用Cubic作为拥塞算法，可切换为性能更好的BBR算法</p>
+                                    </div>
+                                </div>
+    
+                            </div>
+                        </div>
+
+                </div>
+                <!-- /.container-fluid -->
+
+            </div>
+            <!-- End of Main Content -->
+
+            <!-- Footer -->
+            <footer class="sticky-footer bg-white">
+                <div class="container my-auto">
+                    <div class="copyright text-center my-auto">
+                        <span>Copyright &copy; Nginx Monitor</span>
+                    </div>
+                </div>
+            </footer>
+            <!-- End of Footer -->
+
+        </div>
+        <!-- End of Content Wrapper -->
+
+    </div>
+    <!-- End of Page Wrapper -->
+
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
+
+    <!-- Bootstrap core JavaScript-->
+    <script src="vendor/jquery/jquery.min.js"></script>
+    <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Core plugin JavaScript-->
+    <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+
+    <!-- Custom scripts for all pages-->
+    <script src="js/sb-admin-2.min.js"></script>
+    <script>
+        //var ip = "192.168.1.238";
+        var ip = window.location.host;
+        console.log("remote ip: " + ip);
+
+        function AddSession(key, value){
+            var sel = document.getElementById("index_session");
+            var sel2 = document.getElementById("grafana_session");
+            var sel3 = document.getElementById("mean_session");
+            var el = document.createElement("a");
+            el.className = "collapse-item";
+            el.innerHTML = value;
+            el.href = "charts.html?session=" + value;
+            var el2 = document.createElement("a");
+            el2.className = "collapse-item";
+            el2.innerHTML = value;
+            el2.href = "grafana.html?session=" + value;
+            var el3 = document.createElement("a");
+            el3.className = "collapse-item";
+            el3.innerHTML = value;
+            el3.href = "tables.html?session=" + value;
+            sel.appendChild(el)
+            sel2.appendChild(el2)
+            sel3.appendChild(el3)
+        }
+
+        GetMeasurement(ip);
+
+        function GetMeasurement(ip){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8086/query?db=ebpfdb&q=show measurements";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(result);
+                        console.log(object);
+                        if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                            object.results[0].series[0].values.forEach(element => {
+                                console.log(element);
+                                AddSession(element, element);
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    
+        GetStatus(ip);
+        
+        function GetStatus(ip){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8008/api/status?item=all";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest status");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(object.status);
+                        var stat = object.status;
+                        var arr = stat.split(",");
+                        console.log(arr);
+                        document.getElementById("iostate").innerHTML = arr[0];
+                        document.getElementById("cpustate").innerHTML = arr[1];
+                        document.getElementById("twstate").innerHTML = arr[2];
+                        document.getElementById("congstate").innerHTML = arr[3];
+                    }
+                }
+            }
+        }
+
+        function openIO(){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8008/api/on?item=io_opt";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest io_opt");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(object.success);
+                        if (object.success == 1){
+                            alert("NGINX IO方式自动调优开启成功");
+                        } else {
+                            alert("NGINX IO方式自动调优开启失败");
+                        }
+                        GetStatus(ip);
+                    }
+                }
+            }
+        }
+
+        function closeIO(){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8008/api/off?item=io_opt";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest io_opt");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(object.success);
+                        if (object.success == 1){
+                            alert("NGINX IO方式自动调优关闭成功");
+                        } else {
+                            alert("NGINX IO方式自动调优关闭失败");
+                        }
+                        GetStatus(ip);
+                    }
+                }
+            }
+        }
+
+
+        function openCpu(){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8008/api/on?item=cpubind";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest cpu_opt");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(object.success);
+                        if (object.success == 1){
+                            alert("NGINX工作进程绑定调优开启成功");
+                        } else {
+                            alert("NGINX工作进程绑定调优开启失败");
+                        }
+                        GetStatus(ip);
+                    }
+                }
+            }
+        }
+
+        function closeCpu(){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8008/api/off?item=cpubind";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest cpu_opt");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(object.success);
+                        if (object.success == 1){
+                            alert("NGINX工作进程绑定调优开启成功");
+                        } else {
+                            alert("NGINX工作进程绑定调优开启失败");
+                        }
+                        GetStatus(ip);
+                    }
+                }
+            }
+        }
+
+        function openTW(){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8008/api/on?item=tw_opt";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest tw_opt");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(object.success);
+                        if (object.success == 1){
+                            alert("TIMEWAIT调优开启成功");
+                        } else {
+                            alert("TIMEWAIT调优开启失败");
+                        }
+                        GetStatus(ip);
+                    }
+                }
+            }
+        }
+
+        function closeTW(){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8008/api/off?item=tw_opt";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest tw_opt");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(object.success);
+                        if (object.success == 1){
+                            alert("TIMEWAIT调优关闭成功");
+                        } else {
+                            alert("TIMEWAIT调优关闭失败");
+                        }
+                        GetStatus(ip);
+                    }
+                }
+            }
+        }
+
+        function openCong(){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8008/api/on?item=tcp_opt";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest tcp_opt");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(object.success);
+                        if (object.success == 1){
+                            alert("拥塞算法调优开启成功");
+                        } else {
+                            alert("拥塞算法调优开启失败");
+                        }
+                        GetStatus(ip);
+                    }
+                }
+            }
+        }
+
+        function closeCong(){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8008/api/off?item=tcp_opt";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest tcp_opt");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(object.success);
+                        if (object.success == 1){
+                            alert("拥塞算法调优关闭成功");
+                        } else {
+                            alert("拥塞算法调优关闭失败");
+                        }
+                        GetStatus(ip);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

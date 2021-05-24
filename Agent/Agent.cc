@@ -81,9 +81,28 @@ class Agent{
         event_base_dispatch(base);
     }
 
-    //void ReConnectServer(){
+    void ReConnectServer(){
         //凭借session重连
-    //}
+        struct sockaddr_in remoteaddr;
+        memset(&remoteaddr, 0, sizeof(remoteaddr));
+        remoteaddr.sin_family = AF_INET;
+        remoteaddr.sin_addr.s_addr = inet_addr(serverIp.c_str());
+        remoteaddr.sin_port = htons(serverPort);
+        clibev = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE);
+        bufferevent_socket_connect(clibev, (struct sockaddr *)&remoteaddr, sizeof(remoteaddr));
+        bufferevent_setcb(clibev, [](struct bufferevent *bev, void *arg){
+            Agent *agent = (Agent *)arg;
+            evbuffer *input = bufferevent_get_input(bev);
+            if (evbuffer_get_length(input) >= 32){
+                char buf[32] = {0};
+                evbuffer_remove(input, buf, 32);
+                agent->session;
+                event_base_loopbreak(agent->base);
+            }
+        }, nullptr, nullptr, this);
+        bufferevent_enable(clibev, EV_READ);
+        event_base_dispatch(base);
+    }
 
     static void accept_cb(struct evconnlistener *listener, evutil_socket_t fd,
          struct sockaddr *address, int socklen, void *arg){
@@ -229,8 +248,15 @@ class Agent{
     std::string session; //用于重连
 };
 
-int main(void){
-    Agent agent("127.0.0.1");
+int main(int argc, char* argv[]){
+    string ip;
+    if (argc == 1){
+        ip = "127.0.0.1";
+    }
+    else if (argc == 2){
+        ip = argv[1];
+    }
+    Agent agent(ip);
     agent.ConnectServer();
     agent.AddPlugin(NgxReqCntPlugin);
     agent.AddPlugin(TcpRttPlugin);

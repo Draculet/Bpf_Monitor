@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>监控系统</title>
+    <meta charset="utf-8" /> 
+</head>
+<body>
+    <!--HTML-->
+    <div>
+        <h2>选择监控Session</h2>
+        <select id="session">
+            <option value = "">空</option>
+        </select>
+        <button onclick="GoToMonitor()">实时监控</button>
+    </div>
+
+    <script>
+        function AddOption(key, value){
+            var sel = document.getElementById("session");
+            sel.options.add(new Option(key, value));
+        }
+
+        GetMeasurement("192.168.1.238");
+
+        function GetMeasurement(ip){
+            var request = new XMLHttpRequest();
+            var method = "GET";
+            var url = "http://" + ip + ":8086/query?db=ebpfdb&q=show measurements";
+            request.open(method,url);
+            request.send(null);
+            console.log("doRequest");
+            request.onreadystatechange = function(){
+                console.log(request.status);
+                if(request.readyState == 4){
+                    if(request.status == 200 || request.status == 304){
+                        var result = request.responseText;
+                        var object = eval("("+result+")");
+                        console.log(result);
+                        console.log(object);
+                        if (object.results.length > 0 && object.results[0].series && object.results[0].series.length > 0){
+                            object.results[0].series[0].values.forEach(element => {
+                                console.log(element);
+                                AddOption(element, element);
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    
+        function GoToMonitor(){
+            var val = document.getElementById("session").value;
+            if (val != ""){
+                window.location.href = "demo.html?session=" + val;
+            }
+        }
+
+    </script>
+ 
+</body>
+</html>

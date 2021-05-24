@@ -101,7 +101,6 @@ class TraceServer{
                 flag = string(flag, pos + 1);
                 printf("thread group flag: %s\n", flag.c_str());
                 serv->pool->push_task([&serv, data]{
-                    //FIXME 线程池由于同步需要导致每次http请求都需要新的DataAccess,此处需要优化
                     DataAccess da("ebpfdb", "127.0.0.1:8086");
                     da.Insert(data);
                 }, flag);

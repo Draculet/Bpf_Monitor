@@ -9,6 +9,10 @@ import time
 from enum import Enum
 import struct
 import socket
+import http.server
+import socketserver
+from urllib.parse import urlparse
+from urllib.parse import parse_qs
 
 
 def get_processes_stats(bpf):
@@ -114,21 +118,21 @@ int do_count(struct pt_regs *ctx) {
 
 int kprobe__tcp_time_wait(struct pt_regs *ctx, struct sock *sk){
     u32 pid = bpf_get_current_pid_tgid() >> 32;
-    u64 *count = timewait_m.lookup(pid);
+    u64 *count = timewait_m.lookup(&pid);
     u64 cnt = 1;
     if (count)
         cnt += *count;
-    timewait_m.update(&pid, cnt);
+    timewait_m.update(&pid, &cnt);
     return 0;
 }
 
 int kprobe__inet_twsk_free(struct pt_regs *ctx, struct inet_timewait_sock *tw){
     u32 pid = bpf_get_current_pid_tgid() >> 32;
-    u64 *count = timewait_m.lookup(pid);
+    u64 *count = timewait_m.lookup(&pid);
     u64 cnt = 0;
     if (count){
         cnt = *count - 1;
-        timewait_m.update(&pid, cnt);
+        timewait_m.update(&pid, &cnt);
     }
     return 0;
 }
@@ -392,12 +396,17 @@ def reloadNginx():
 # IO方式优化
 def JudgeIO(bpf, duration):
     global iotype
+    global io_opt
+
+    if io_opt == False:
+        return
+    
     rhit = getReadHit(bpf)
     flow = getMeanFlow(bpf) / 1000 #KB
     sendfileflow = getMeanSendfileFlow(bpf) / 1000 #KB
     qps = getMeanQPS(duration) #QPS
     print(str(rhit) + " " + str(flow) + "KB " + str(sendfileflow) + "KB " + str(qps))
-    
+
     timer = threading.Timer(duration, JudgeIO, [b, duration])
     timer.start()
 
@@ -508,7 +517,7 @@ def JudgeIO(bpf, duration):
         else: #大文件
             if rhit < 40 and rhit > 0: #命中率低的大文件
                 closeAIO()
-                openDirIO()
+                openDirIO("8m")
                 iotype = IOType.direct_io
                 reloadNginx()
                 return
@@ -539,7 +548,7 @@ def JudgeIO(bpf, duration):
         else: #大文件
             if rhit < 40 and rhit > 0: #命中率低的大文件
                 closeAIOPool()
-                openDirIO()
+                openDirIO("8m")
                 iotype = IOType.direct_io
                 reloadNginx()
                 return
@@ -564,7 +573,6 @@ def JudgeIO(bpf, duration):
 def bindCpu():
     cpu_percent = psutil.cpu_percent(interval=None, percpu=True)
     cpunum = len(cpu_percent)
-    cpunum = 8
     arr = []
     s = ""
     for i in range(cpunum):
@@ -607,12 +615,13 @@ def getTimeWaitCurCount(bpf):
 def JudgeTimeWait(bpf, duration, limit):
     tw_count = getTimeWaitCurCount(bpf)
     if (tw_count > limit):
-        openTcpTWRecycle()
-        openTcpTWReUse()
-    else
-        closeTcpTWRecycle()
-        closeTcpTWReUse()
-
+        #openTcpTWRecycle()
+        #openTcpTWReUse()
+        print("")
+    else:
+        print("")
+        #closeTcpTWRecycle()
+        #closeTcpTWReUse()
 
 
 class IOType(Enum):
@@ -624,22 +633,181 @@ class IOType(Enum):
     
 iotype = IOType.default_io
 
-if __name__ == "__main__":
+
+class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
+    global cpubind
+    global tw_opt
+    global tcp_opt
+    global io_opt
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        print(self.path)
+        apistr,querystr = self.path.split("?")
+        if apistr == "/api/status" and querystr == "item=all":
+            data = "{\"status\": \""
+            if io_opt == True:
+                data += "on,"
+            else:
+                data += "off,"
+            if cpubind == True:
+                data += "on,"
+            else:
+                data += "off,"
+            if tw_opt == True:
+                data += "on,"
+            else:
+                data += "off,"
+            if tcp_opt == True:
+                data += "on\"}"
+            else:
+                data += "off\"}"
+        elif apistr == "/api/on" and querystr == "item=io_opt":
+            if io_opt == False:
+                openAutoIO()
+            data = "{\"success\":1}"
+        elif apistr == "/api/off" and querystr == "item=io_opt":
+            if io_opt == True:
+                closeAutoIO()
+            data = "{\"success\":1}"
+        elif apistr == "/api/on" and querystr == "item=cpubind":
+            data = "{\"success\":1}"
+        elif apistr == "/api/off" and querystr == "item=cpubind":
+            data = "{\"success\":-1}"
+        elif apistr == "/api/on" and querystr == "item=tw_opt":
+            if tw_opt == False:
+                openAutoTW()
+            data = "{\"success\":1}"
+        elif apistr == "/api/off" and querystr == "item=tw_opt":
+            if tw_opt == True:
+                closeAutoTW()
+            data = "{\"success\":1}"
+        elif apistr == "/api/on" and querystr == "item=tcp_opt":
+            if tcp_opt == False:
+                openAutoCong()
+            data = "{\"success\":1}"
+        elif apistr == "/api/off" and querystr == "item=tcp_opt":
+            if tcp_opt == True:
+                closeAutoCong()
+            data = "{\"success\":1}"
+        print(data)
+        self.wfile.write(bytes(data, "utf8"))
+
+        return
+    
+    def do_Post(self):
+        self.do_GET(self)
+        return
+
+handler_object = MyHttpRequestHandler
+
+def openAutoIO():
+    global io_opt
+    global iotype
+    global b
+    print("open auto io")
     os.system("cp /etc/nginx/nginx.conf .")
     os.system("nginx -s stop")
     closeSendfile()
     path = os.getcwd() + "/nginx.conf"
-
-    bindCpu()
-    
     print(path)
     os.system("nginx -c " + path)
-
     iotype = IOType.default_io
-    #print(iotype)
-    #reloadNginx()
     duration = 10 # duration以秒记,以5min为例,进入循环:前5min收集数据,作为后5min配置的依据进行调优决策
+    io_opt = True
     timer = threading.Timer(duration, JudgeIO, [b, duration])
     timer.start()
-    while True:
-        sleep(100)
+
+def closeAutoIO():
+    global io_opt
+    io_opt = False
+    print("close auto io")
+    os.system("nginx -s stop")
+    os.system("nginx")
+
+def openAutoTW():
+    global tw_opt
+    tw_opt = True
+    os.system("cp /etc/sysctl.conf .")
+    f = open('/etc/sysctl.conf','r+')
+    flist = f.readlines()
+    for index, line in enumerate(flist):
+        if (line.find("net.ipv4.tcp_tw_reuse") != -1 or line.find("net.ipv4.tcp_tw_recycle") != -1):
+            return
+    flist.insert(0, "net.ipv4.tcp_tw_reuse = 1\r\n")
+    flist.insert(0, "net.ipv4.tcp_tw_recycle = 1\r\n")
+    f = open('/etc/sysctl.conf', 'w+')
+    f.writelines(flist)
+    #os.system("sysctl -p")
+
+def closeAutoTW():
+    global tw_opt
+    f = open('/etc/sysctl.conf','r+')
+    flist = f.readlines()
+    for index, line in enumerate(flist):
+        if line.find("net.ipv4.tcp_tw_reuse = 1") != -1:
+            flist.pop(index)
+    for index, line in enumerate(flist):
+        if line.find("net.ipv4.tcp_tw_recycle = 1") != -1:
+            flist.pop(index)
+    f = open('/etc/sysctl.conf', 'w+')
+    f.writelines(flist)
+    tw_opt = False
+
+def openAutoCong():
+    global tcp_opt
+    tcp_opt = True
+    os.system("cp /etc/sysctl.conf .")
+    f = open('/etc/sysctl.conf','r+')
+    flist = f.readlines()
+    for index, line in enumerate(flist):
+        if (line.find("net.ipv4.tcp_congestion_control=bbr") != -1):
+            return
+    flist.insert(0, "net.ipv4.tcp_congestion_control=bbr\r\n")
+    f = open('/etc/sysctl.conf', 'w+')
+    f.writelines(flist)
+    #os.system("sysctl -p")
+    
+
+def closeAutoCong():
+    global tcp_opt
+    tcp_opt = False
+    f = open('/etc/sysctl.conf','r+')
+    flist = f.readlines()
+    for index, line in enumerate(flist):
+        if line.find("net.ipv4.tcp_congestion_control=bbr") != -1:
+            flist.pop(index)
+    f = open('/etc/sysctl.conf', 'w+')
+    f.writelines(flist)
+    
+    
+
+io_opt = False
+cpubind = True
+tw_opt = False
+tcp_opt = False
+
+
+if __name__ == "__main__":
+    #os.system("cp /etc/nginx/nginx.conf .")
+    #os.system("nginx -s stop")
+    #closeSendfile()
+    #path = os.getcwd() + "/nginx.conf"
+    openAutoIO()
+    bindCpu()
+    
+    #print(path)
+    #os.system("nginx -c " + path)
+
+    #iotype = IOType.default_io
+    #print(iotype)
+    reloadNginx()
+    #duration = 10 # duration以秒记,以5min为例,进入循环:前5min收集数据,作为后5min配置的依据进行调优决策
+    #timer = threading.Timer(duration, JudgeIO, [b, duration])
+    #timer.start()
+    port = 8008
+    my_server = socketserver.TCPServer(("", port), handler_object)
+    my_server.serve_forever()
