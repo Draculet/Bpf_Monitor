@@ -647,6 +647,11 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         print(self.path)
         apistr,querystr = self.path.split("?")
+        if apistr == "/api/ping":
+            data = "{\"status\": \"online\"}"
+        if apistr == "/api/init":
+            initfile()
+            data = "{\"status\": \"online\"}"
         if apistr == "/api/status" and querystr == "item=all":
             data = "{\"status\": \""
             if io_opt == True:
@@ -783,7 +788,9 @@ def closeAutoCong():
     f = open('/etc/sysctl.conf', 'w+')
     f.writelines(flist)
     
-    
+def initfile():
+    os.system("cp /etc/sysctl.conf .")
+    os.system("cp /etc/nginx/nginx.conf .")
 
 io_opt = False
 cpubind = True
